@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Corporate, SetupStage, Tier } from "@/lib/types";
-import { saveCorporateState } from "@/app/actions";
+import { saveCorporateState, getCorporateById } from "@/app/actions";
 
 const INITIAL_TIERS: Tier[] = [
     {
@@ -67,10 +67,36 @@ export function useCorporateEngine(corporateId: string) {
     const [corporate, setCorporate] = useState<Corporate>({ ...INITIAL_STATE, id: corporateId });
     const [isSaving, setIsSaving] = useState(false);
 
+    // Load existing state if available
+    useEffect(() => {
+        const saved = localStorage.getItem(`corp_${corporateId}`);
+        if (saved) {
+            setCorporate(JSON.parse(saved));
+        }
+    }, [corporateId]);
+
+    // Automatically save to local cache on every change
+    useEffect(() => {
+        if (corporate.id !== "new-corp") {
+            localStorage.setItem(`corp_${corporate.id}`, JSON.stringify(corporate));
+
+            // Also maintain a master list for the listing page
+            const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
+            const index = masterList.findIndex((id: string) => id === corporate.id);
+            if (index === -1) {
+                masterList.push(corporate.id);
+                localStorage.setItem('corp_master_list', JSON.stringify(masterList));
+            }
+        }
+    }, [corporate]);
+
     // -- Actions --
 
     const updateCorporateInfo = useCallback((data: Partial<Corporate>) => {
-        setCorporate((prev) => ({ ...prev, ...data }));
+        setCorporate((prev) => {
+            const newState = { ...prev, ...data };
+            return newState;
+        });
     }, []);
 
     const updateTier = useCallback((tierId: string, updates: Partial<Tier>) => {

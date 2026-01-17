@@ -2,6 +2,7 @@
 
 import { useCorporateEngine } from "./_components/useCorporateEngine";
 import { Sidebar } from "./_components/Sidebar";
+import { useSearchParams } from "next/navigation";
 
 // Components for stages
 import { CorporateInfoForm } from "./_components/CorporateInfoForm";
@@ -14,6 +15,10 @@ import { CorporateOverview } from "./_components/CorporateOverview";
 export default function CorporatePage({ params }: { params: { id: string } }) {
     const engine = useCorporateEngine(params.id);
     const { corporate } = engine;
+    const searchParams = useSearchParams();
+    const isForcedOverview = searchParams.get("view") === "overview";
+
+    const activeStage = isForcedOverview ? "OVERVIEW" : corporate.stage;
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -41,16 +46,16 @@ export default function CorporatePage({ params }: { params: { id: string } }) {
                 {/* Stage Tabs */}
                 <div className="border-b border-gray-200 bg-white">
                     <div className="flex gap-8 px-6">
-                        <button className={`border-b-2 px-1 py-3 text-sm font-medium ${corporate.stage === "CORPORATE_INFO" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                        <button className={`border-b-2 px-1 py-3 text-sm font-medium ${activeStage === "CORPORATE_INFO" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
                             CORPORATE INFO
                         </button>
-                        <button className={`border-b-2 px-1 py-3 text-sm font-medium ${corporate.stage === "TIERS" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                        <button className={`border-b-2 px-1 py-3 text-sm font-medium ${activeStage === "TIERS" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
                             TIERS
                         </button>
-                        <button className={`border-b-2 px-1 py-3 text-sm font-medium ${corporate.stage === "SETUP_STATUS" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                        <button className={`border-b-2 px-1 py-3 text-sm font-medium ${activeStage === "SETUP_STATUS" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
                             SETUP STATUS
                         </button>
-                        <button className={`border-b-2 px-1 py-3 text-sm font-medium ${corporate.stage === "OVERVIEW" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
+                        <button className={`border-b-2 px-1 py-3 text-sm font-medium ${activeStage === "OVERVIEW" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}>
                             OVERVIEW
                         </button>
                     </div>
@@ -58,22 +63,22 @@ export default function CorporatePage({ params }: { params: { id: string } }) {
 
                 {/* Content Area - NO WRAPPER, NO PADDING */}
                 <div className="bg-gray-50 p-6">
-                    {corporate.stage === "CORPORATE_INFO" && (
+                    {activeStage === "CORPORATE_INFO" && (
                         <CorporateInfoForm engine={engine} />
                     )}
-                    {corporate.stage === "TIERS" && (
+                    {activeStage === "TIERS" && (
                         <TierTable engine={engine} />
                     )}
-                    {corporate.stage === "SETUP_STATUS" && (
+                    {activeStage === "SETUP_STATUS" && (
                         <SetupStatus engine={engine} />
                     )}
-                    {corporate.stage === "SUBDOMAIN" && (
+                    {activeStage === "SUBDOMAIN" && (
                         <SubdomainModal engine={engine} />
                     )}
-                    {corporate.stage === "ADMINS" && (
+                    {activeStage === "ADMINS" && (
                         <AdminInviteModal engine={engine} />
                     )}
-                    {corporate.stage === "OVERVIEW" && (
+                    {activeStage === "OVERVIEW" && (
                         <CorporateOverview engine={engine} />
                     )}
                 </div>

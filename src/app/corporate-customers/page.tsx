@@ -1,0 +1,148 @@
+"use client";
+
+import { Sidebar } from "./[id]/_components/Sidebar";
+import { Plus, Info, Trash2, Edit2, Check } from "lucide-react";
+import Link from "next/link";
+import { useState, useEffect } from "react";
+import { getCorporates } from "../actions";
+import { Corporate } from "@/lib/types";
+
+export default function CorporateListingPage() {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [corporates, setCorporates] = useState<Corporate[]>([]);
+
+    useEffect(() => {
+        const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
+        const allData = masterList.map((id: string) => {
+            const item = localStorage.getItem(`corp_${id}`);
+            return item ? JSON.parse(item) : null;
+        }).filter(Boolean);
+        setCorporates(allData);
+    }, []);
+
+    const filtered = corporates.filter(c =>
+        (c.name || "Unnamed").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.contactEmail || "").toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const newId = `corp-${Math.random().toString(36).substr(2, 9)}`;
+
+    return (
+        <div className="flex min-h-screen bg-gray-50">
+            <Sidebar />
+            <main className="flex-1 ml-64 p-6">
+                {/* Header matching screenshot */}
+                <div className="mb-4 bg-[#1e3a5f] p-1.5 px-4 flex justify-between items-center rounded-t shadow-sm">
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-white font-bold text-xs uppercase tracking-wider">Corporate Customers</h2>
+                        <Info size={14} className="text-white/70" />
+                    </div>
+                    <Link
+                        href={`/corporate-customers/${newId}`}
+                        className="bg-white text-[#1e3a5f] px-4 py-1 rounded text-[10px] font-bold uppercase transition-all hover:bg-gray-100 flex items-center gap-1.5"
+                    >
+                        <Plus size={12} /> Add New
+                    </Link>
+                </div>
+
+                {/* Table Controls */}
+                <div className="bg-white p-4 border border-gray-200 flex justify-between items-center text-[12px] text-gray-600">
+                    <div className="flex items-center gap-2">
+                        <span>Show</span>
+                        <select className="border border-gray-300 rounded px-1 py-0.5 bg-gray-50">
+                            <option>10</option>
+                            <option>25</option>
+                            <option>50</option>
+                        </select>
+                        <span>entries</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span>Search:</span>
+                        <input
+                            type="text"
+                            className="border border-gray-300 rounded px-2 py-0.5 outline-none focus:border-blue-400"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                {/* Table */}
+                <div className="bg-white border-x border-b border-gray-200 overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                        <thead>
+                            <tr className="bg-gray-100/80 text-gray-600 font-bold border-b border-gray-200">
+                                <th className="px-4 py-3 w-8"></th>
+                                <th className="px-4 py-3 border-r border-gray-200">Name</th>
+                                <th className="px-4 py-3 border-r border-gray-200">Broker/Advisor Name</th>
+                                <th className="px-4 py-3 border-r border-gray-200 text-center">Employer profiles</th>
+                                <th className="px-4 py-3 border-r border-gray-200 text-center">Plan Headcount</th>
+                                <th className="px-4 py-3 border-r border-gray-200">Corporate admin email</th>
+                                <th className="px-4 py-3 border-r border-gray-200 text-center">Admin Approved</th>
+                                <th className="px-4 py-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8} className="px-4 py-16 text-center">
+                                        <div className="flex flex-col items-center justify-center text-gray-400">
+                                            <p className="text-sm font-medium">No records found</p>
+                                            <p className="text-[10px]">Click "Add New" to create your first corporate customer</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : filtered.map((corp) => (
+                                <tr key={corp.id} className="hover:bg-gray-50 transition-colors group">
+                                    <td className="px-4 py-2">
+                                        <div className={`w-2 h-2 rounded-full ${corp.corporateInfoCompleted ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                    </td>
+                                    <td className="px-4 py-2 font-medium text-blue-600 hover:underline cursor-pointer">
+                                        <Link href={`/corporate-customers/${corp.id}?view=overview`}>
+                                            {corp.name || "(Empty Name)"}
+                                        </Link>
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-700 text-[10px] uppercase font-bold">{corp.broker || "-"}</td>
+                                    <td className="px-4 py-2 text-center font-bold text-blue-600">
+                                        <span className="underline cursor-pointer">{0}</span>
+                                    </td>
+                                    <td className="px-4 py-2 text-center font-bold text-blue-600">
+                                        <span className="underline cursor-pointer tracking-tighter">
+                                            {corp.tiers?.reduce((acc, t) => acc + (t.status === "Active" ? 1 : 0), 0) || 0}
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-2 text-gray-500 text-[10px] font-medium">{corp.contactEmail || "-"}</td>
+                                    <td className="px-4 py-2 text-center">
+                                        <button className="bg-[#1e3a5f] text-white px-3 py-0.5 rounded text-[8px] font-black uppercase shadow-sm hover:bg-slate-800 transition-all">
+                                            Approve
+                                        </button>
+                                    </td>
+                                    <td className="px-4 py-2">
+                                        <div className="flex items-center justify-center gap-3">
+                                            <button className="text-red-400 hover:text-red-600 transition-colors">
+                                                <Trash2 size={13} />
+                                            </button>
+                                            <Link href={`/corporate-customers/${corp.id}`} className="text-blue-400 hover:text-blue-600 transition-colors">
+                                                <Edit2 size={13} />
+                                            </Link>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination */}
+                <div className="mt-4 flex justify-between items-center text-[12px] text-gray-500 font-medium">
+                    <p>Showing 1 to 8 of 8 entries</p>
+                    <div className="flex gap-px shadow-sm rounded overflow-hidden">
+                        <button className="bg-[#1e3a5f] text-white px-3 py-1 hover:bg-slate-800 transition-all font-bold">Previous</button>
+                        <button className="bg-blue-600 text-white px-4 py-1 font-bold">1</button>
+                        <button className="bg-[#1e3a5f] text-white px-3 py-1 hover:bg-slate-800 transition-all font-bold">Next</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
+}

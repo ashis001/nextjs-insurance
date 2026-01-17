@@ -8,7 +8,7 @@ import clsx from "clsx";
 const NAV_ITEMS = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Advisors", href: "/advisors", icon: Users },
-    { label: "Corporate Customers", href: "/corporate-customers/demo-corp-1", icon: Building2 },
+    { label: "Corporate Customers", href: "/corporate-customers", icon: Building2 },
     { label: "Members", href: "/members", icon: UserCircle },
     { label: "Marketing", href: "/marketing", icon: Megaphone },
 ];
