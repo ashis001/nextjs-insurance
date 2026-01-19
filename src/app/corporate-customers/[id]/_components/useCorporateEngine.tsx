@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Corporate, SetupStage, Tier } from "@/lib/types";
-import { saveCorporateState, getCorporateById } from "@/app/actions";
+import { fetchCorporateById, upsertCorporate } from "@/lib/db";
 
 const INITIAL_TIERS: Tier[] = [
     {
@@ -67,26 +67,29 @@ export function useCorporateEngine(corporateId: string) {
     const [corporate, setCorporate] = useState<Corporate>({ ...INITIAL_STATE, id: corporateId });
     const [isSaving, setIsSaving] = useState(false);
 
-    // Load existing state if available
+    // Load existing state from Supabase
     useEffect(() => {
-        const saved = localStorage.getItem(`corp_${corporateId}`);
-        if (saved) {
-            setCorporate(JSON.parse(saved));
-        }
+        const load = async () => {
+            if (corporateId === "new-corp") return;
+            const saved = await fetchCorporateById(corporateId);
+            if (saved) {
+                setCorporate(saved);
+            }
+        };
+        load();
     }, [corporateId]);
 
-    // Automatically save to local cache on every change
+    // Automatically save to Supabase cloud on every change (with basic debounce)
     useEffect(() => {
-        if (corporate.id !== "new-corp") {
-            localStorage.setItem(`corp_${corporate.id}`, JSON.stringify(corporate));
-
-            // Also maintain a master list for the listing page
-            const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
-            const index = masterList.findIndex((id: string) => id === corporate.id);
-            if (index === -1) {
-                masterList.push(corporate.id);
-                localStorage.setItem('corp_master_list', JSON.stringify(masterList));
-            }
+        if (corporate.id !== "new-corp" && corporate.name) {
+            const timer = setTimeout(async () => {
+                try {
+                    await upsertCorporate(corporate);
+                } catch (err) {
+                    console.error("Cloud save failed", err);
+                }
+            }, 1000); // 1s debounce
+            return () => clearTimeout(timer);
         }
     }, [corporate]);
 
@@ -111,7 +114,7 @@ export function useCorporateEngine(corporateId: string) {
     const setSetupStage = useCallback(async (newStage: SetupStage) => {
         setIsSaving(true);
         // Persist current state before moving
-        await saveCorporateState(corporate.id, corporate);
+        await upsertCorporate(corporate);
         setCorporate((prev) => ({ ...prev, stage: newStage }));
         setIsSaving(false);
     }, [corporate]);

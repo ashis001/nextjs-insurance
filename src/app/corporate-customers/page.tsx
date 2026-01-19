@@ -4,21 +4,32 @@ import { Sidebar } from "./[id]/_components/Sidebar";
 import { Plus, Info, Trash2, Edit2, Check } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { getCorporates } from "../actions";
+import { fetchAllCorporates, deleteCorporate } from "@/lib/db";
 import { Corporate } from "@/lib/types";
 
 export default function CorporateListingPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [corporates, setCorporates] = useState<Corporate[]>([]);
 
+    const loadCorporatesList = async () => {
+        const data = await fetchAllCorporates();
+        setCorporates(data);
+    };
+
     useEffect(() => {
-        const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
-        const allData = masterList.map((id: string) => {
-            const item = localStorage.getItem(`corp_${id}`);
-            return item ? JSON.parse(item) : null;
-        }).filter(Boolean);
-        setCorporates(allData);
+        loadCorporatesList();
     }, []);
+
+    const handleDelete = async (id: string) => {
+        if (confirm("Are you sure you want to delete this corporate customer? It will be removed from the cloud database.")) {
+            try {
+                await deleteCorporate(id);
+                await loadCorporatesList();
+            } catch (err) {
+                alert("Failed to delete corporate.");
+            }
+        }
+    };
 
     const filtered = corporates.filter(c =>
         (c.name || "Unnamed").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -119,7 +130,10 @@ export default function CorporateListingPage() {
                                     </td>
                                     <td className="px-4 py-2">
                                         <div className="flex items-center justify-center gap-3">
-                                            <button className="text-red-400 hover:text-red-600 transition-colors">
+                                            <button
+                                                onClick={() => handleDelete(corp.id)}
+                                                className="text-red-400 hover:text-red-600 transition-colors"
+                                            >
                                                 <Trash2 size={13} />
                                             </button>
                                             <Link href={`/corporate-customers/${corp.id}`} className="text-blue-400 hover:text-blue-600 transition-colors">
@@ -135,7 +149,7 @@ export default function CorporateListingPage() {
 
                 {/* Pagination */}
                 <div className="mt-4 flex justify-between items-center text-[12px] text-gray-500 font-medium">
-                    <p>Showing 1 to 8 of 8 entries</p>
+                    <p>Showing 1 to {filtered.length} of {filtered.length} entries</p>
                     <div className="flex gap-px shadow-sm rounded overflow-hidden">
                         <button className="bg-[#1e3a5f] text-white px-3 py-1 hover:bg-slate-800 transition-all font-bold">Previous</button>
                         <button className="bg-blue-600 text-white px-4 py-1 font-bold">1</button>
