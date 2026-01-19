@@ -168,7 +168,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs text-gray-600 mb-1">Select Profile</label>
+                        <label className="block text-xs text-gray-600 mb-1">Insurance Type</label>
                         <select {...register("selectProfile")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
                             <option value="">Select</option>
                             {profileOptions.map(opt => (
@@ -177,10 +177,10 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs text-gray-600 mb-1">Payment Platform</label>
+                        <label className="block text-xs text-gray-600 mb-1">Payment Gateway</label>
                         <select {...register("paymentPlatform")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
                             <option value="AuthorizeNet">AuthorizeNet</option>
-                            <option value="Staxbill">Staxbill</option>
+                            <option value="Stripe">Stripe</option>
                         </select>
                     </div>
                 </div>
@@ -271,7 +271,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             {/* Group Contacts Section */}
             <div>
                 <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">Group Contacts</h3>
+                    <h3 className="text-sm font-semibold text-white">Hr Benefits Contacts</h3>
                 </div>
                 <div className="bg-white p-4 space-y-3">
                     {fields.map((field, index) => (
@@ -312,7 +312,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             {/* Enrollment Section */}
             <div>
                 <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">Enrollment Start Date for New Hires</h3>
+                    <h3 className="text-sm font-semibold text-white">Enrollment Policies</h3>
                 </div>
                 <div className="bg-white p-4 flex gap-8">
                     <div className="flex-1">

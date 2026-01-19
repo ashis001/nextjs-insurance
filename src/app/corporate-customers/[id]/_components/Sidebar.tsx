@@ -46,7 +46,7 @@ export function Sidebar() {
                     <div className="h-8 w-8 rounded-full bg-gray-200" />
                     <div className="text-xs">
                         <p className="font-medium text-gray-900">John Smith</p>
-                        <p className="text-gray-500">Super Admin</p>
+                        {/* <p className="text-gray-500">Super Admin</p> */}
                     </div>
                 </div>
             </div>
