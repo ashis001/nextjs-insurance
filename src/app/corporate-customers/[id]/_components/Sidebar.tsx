@@ -58,7 +58,7 @@ export function Sidebar() {
           <div className='h-8 w-8 rounded-full bg-gray-200'>
             <img
               src='/image.png'
-              className='h-full w-full object-cover object-top'
+              className='h-full w-full object-cover object-center rounded-full'
               alt=''
             />
           </div>
