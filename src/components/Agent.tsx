@@ -25,7 +25,7 @@ export default function Agent() {
       console.log("🎉 AgenQ SDK detected → mounting");
 
       // Pass agentId
-      window.AGENQ.render({ agentId: "02abf12e-0d8b-4e3a-97ae-d17b7ec7fa3c" });
+      window.AGENQ.render({ agentId: "6d941c2f-1916-4f81-b22c-10599d071081" });
     }
 
     tryMount();
@@ -37,7 +37,7 @@ export default function Agent() {
     <>
       <div id="agenq-root" ref={slotRef} />
       <Script
-        src={process.env.NEXT_PUBLIC_CDN_URL || "https://cdnstaticfiles.blob.core.windows.net/cdn/clientsdk/agenq-client-sdk.js"}
+        src={"http://localhost:4179/agenq-client-cdn.js"}
         strategy="afterInteractive"
       />
     </>
