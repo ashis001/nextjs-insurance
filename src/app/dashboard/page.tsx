@@ -37,7 +37,7 @@ export default function DashboardPage() {
                         <div className="h-4 w-[1px] bg-gray-300"></div>
                         <div className="text-sm">
                             <span className="text-gray-600">Welcome, </span>
-                            <span className="font-medium">Ashish Broker</span>
+                            <span className="font-medium">John Smith</span>
                         </div>
                     </div>
                 </header>

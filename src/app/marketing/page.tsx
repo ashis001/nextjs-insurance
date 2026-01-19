@@ -34,7 +34,7 @@ export default function MarketingPage() {
                     <div className="flex items-center gap-4">
                         <div className="text-sm">
                             <span className="text-gray-600">Welcome, </span>
-                            <span className="font-medium">Ashish Broker</span>
+                            <span className="font-medium">John Smith</span>
                         </div>
                     </div>
                 </header>

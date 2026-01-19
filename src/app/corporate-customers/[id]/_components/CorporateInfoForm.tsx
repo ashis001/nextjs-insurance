@@ -86,17 +86,34 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     });
 
     const selectedBroker = watch("broker");
-    const profileOptions = selectedBroker ? (() => {
-        if (selectedBroker.includes("John Smith")) return ["Profile0(0000010112 - John Smith Brokerage (100)%)"];
-        if (selectedBroker.includes("Johnnie")) return ["Profile0(0000010008 - Johnnie (100)%)"];
-        if (selectedBroker.includes("Ranjhana")) return ["Profile0(0000010111 - Ranjhana (100)%)"];
-        return ["Default Profile"];
-    })() : [];
+    const profileOptions = [
+        "Corporate Insurance",
+        "Health Insurance",
+        "Dental Insurance",
+        "All of Them"
+    ];
 
     const { fields } = useFieldArray({
         control,
         name: "contacts"
     });
+
+    const selectedCountry = watch("address.country");
+
+    const CANADA_PROVINCES = [
+        "Alberta", "British Columbia", "Manitoba", "New Brunswick",
+        "Newfoundland and Labrador", "Nova Scotia", "Ontario",
+        "Prince Edward Island", "Quebec", "Saskatchewan",
+        "Northwest Territories", "Nunavut", "Yukon"
+    ];
+
+    const US_STATES = [
+        "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware", "Florida", "Georgia",
+        "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland",
+        "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey",
+        "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina",
+        "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"
+    ];
 
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
         try {
@@ -142,9 +159,11 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                         <label className="block text-xs text-gray-600 mb-1">Broker</label>
                         <select {...register("broker")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
                             <option value="">Select</option>
-                            <option value="Johnnie-ADVISOR-0000010008">Johnnie-ADVISOR-0000010008</option>
-                            <option value="John Smith Brokerage-ADVISOR-0000010112">John Smith Brokerage-ADVISOR-0000010112</option>
-                            <option value="Ranjhana-ADVISOR-0000010111">Ranjhana-ADVISOR-0000010111</option>
+                            <option value="Sarah Johnson-ADVISOR-1001">Sarah Johnson-ADVISOR-1001</option>
+                            <option value="Emily Davis-ADVISOR-1002">Emily Davis-ADVISOR-1002</option>
+                            <option value="David Miller-ADVISOR-1003">David Miller-ADVISOR-1003</option>
+                            <option value="James Anderson-ADVISOR-1004">James Anderson-ADVISOR-1004</option>
+                            <option value="John-ADVISOR-1005">John-ADVISOR-1005</option>
                         </select>
                     </div>
                     <div>
@@ -173,7 +192,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                         {errors.name && <p className="text-xs text-red-500 mt-0.5">{errors.name.message}</p>}
                     </div>
                     <div>
-                        <label className="block text-xs text-gray-600 mb-1">Provincial offices in Operation*</label>
+                        <label className="block text-xs text-gray-600 mb-1">Offices in Operation*</label>
                         <select {...register("provincialOffices")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
                             <option value="">Select</option>
                             <option value="Toronto">Toronto</option>
@@ -233,10 +252,11 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                         <label className="block text-xs text-gray-600 mb-1">Province*</label>
                         <select {...register("address.province")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
                             <option value="">Select</option>
-                            <option value="Ontario">Ontario</option>
-                            <option value="Quebec">Quebec</option>
-                            <option value="British Columbia">British Columbia</option>
-                            <option value="Alberta">Alberta</option>
+                            {selectedCountry === "Canada" ? (
+                                CANADA_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)
+                            ) : (
+                                US_STATES.map(s => <option key={s} value={s}>{s}</option>)
+                            )}
                         </select>
                     </div>
                     <div>

@@ -19,7 +19,7 @@ export function Sidebar() {
     return (
         <aside className="fixed left-0 top-0 h-full w-64 border-r border-gray-200 bg-white">
             <div className="flex h-14 items-center border-b border-gray-200 px-6">
-                <h1 className="text-lg font-bold text-gray-900">GroupBenefitz</h1>
+                <h1 className="text-lg font-bold text-gray-900">Max Insurance</h1>
             </div>
             <nav className="flex flex-col gap-1 p-4">
                 {NAV_ITEMS.map((item) => {
@@ -45,7 +45,7 @@ export function Sidebar() {
                 <div className="flex items-center gap-3 rounded-md bg-gray-50 p-3">
                     <div className="h-8 w-8 rounded-full bg-gray-200" />
                     <div className="text-xs">
-                        <p className="font-medium text-gray-900">Admin User</p>
+                        <p className="font-medium text-gray-900">John Smith</p>
                         <p className="text-gray-500">Super Admin</p>
                     </div>
                 </div>

@@ -37,7 +37,7 @@ export default function AdvisorsPage() {
                     <div className="flex items-center gap-4">
                         <div className="text-sm">
                             <span className="text-gray-600">Welcome, </span>
-                            <span className="font-medium">Ashish Broker</span>
+                            <span className="font-medium">John Smith</span>
                         </div>
                     </div>
                 </header>
@@ -112,8 +112,8 @@ export default function AdvisorsPage() {
                                                 <td className="px-6 py-4 text-gray-900 font-medium">{advisor.clients}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium border ${advisor.status === "Active" ? "bg-green-50 text-green-700 border-green-200" :
-                                                            advisor.status === "Pending" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                                                                "bg-gray-50 text-gray-600 border-gray-200"
+                                                        advisor.status === "Pending" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                                                            "bg-gray-50 text-gray-600 border-gray-200"
                                                         }`}>
                                                         {advisor.status}
                                                     </span>

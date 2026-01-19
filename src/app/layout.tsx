@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "GroupBenefitz - Corporate Admin Platform",
+  title: "Max Insurance - Corporate Admin Platform",
   description: "Enterprise-grade SaaS Admin Platform for Corporate Benefits Management",
 };
 
