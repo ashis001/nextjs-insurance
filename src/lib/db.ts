@@ -39,12 +39,16 @@ export async function fetchCorporateById(id: string) {
         .from('corporates')
         .select('data')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
     if (error) {
+        // If it's not a 'no rows' error (PGRST116), log it.
+        // maybeSingle should handle no rows by returning null data and no error usually.
         console.error('Error fetching corporate by id:', error);
         return null;
     }
+
+    if (!data) return null;
 
     return data.data as Corporate;
 }
