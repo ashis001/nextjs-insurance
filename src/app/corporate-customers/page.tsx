@@ -1,7 +1,7 @@
 "use client";
 
 import { Sidebar } from "./[id]/_components/Sidebar";
-import { Plus, Info, Trash2, Edit2, Check } from "lucide-react";
+import { Plus, Info, Trash2, Edit2, Check, AlertTriangle, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { fetchAllCorporates, deleteCorporate } from "@/lib/db";
@@ -10,6 +10,8 @@ import { Corporate } from "@/lib/types";
 export default function CorporateListingPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [corporates, setCorporates] = useState<Corporate[]>([]);
+    const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const loadCorporatesList = async () => {
         // 1. Load from Supabase (Cloud)
@@ -34,22 +36,25 @@ export default function CorporateListingPage() {
         loadCorporatesList();
     }, []);
 
-    const handleDelete = async (id: string) => {
-        if (confirm("Are you sure you want to delete this corporate customer? it will be removed from both cache and cloud.")) {
-            try {
-                // Delete from Cloud
-                await deleteCorporate(id);
+    const confirmDelete = async () => {
+        if (!deleteId) return;
+        try {
+            setIsDeleting(true);
+            // Delete from Cloud
+            await deleteCorporate(deleteId);
 
-                // Delete from Cache
-                localStorage.removeItem(`corp_${id}`);
-                const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
-                const newList = masterList.filter((mId: string) => mId !== id);
-                localStorage.setItem('corp_master_list', JSON.stringify(newList));
+            // Delete from Cache
+            localStorage.removeItem(`corp_${deleteId}`);
+            const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
+            const newList = masterList.filter((mId: string) => mId !== deleteId);
+            localStorage.setItem('corp_master_list', JSON.stringify(newList));
 
-                await loadCorporatesList();
-            } catch (err) {
-                alert("Failed to delete corporate.");
-            }
+            await loadCorporatesList();
+            setDeleteId(null);
+        } catch (err) {
+            alert("Failed to delete corporate.");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -74,7 +79,7 @@ export default function CorporateListingPage() {
                         href={`/corporate-customers/${newId}`}
                         className="bg-white text-[#1e3a5f] px-4 py-1 rounded text-[10px] font-bold uppercase transition-all hover:bg-gray-100 flex items-center gap-1.5"
                     >
-                        <Plus size={12} /> Add New
+                        <Plus size={12} /> Add New Customer
                     </Link>
                 </div>
 
@@ -153,7 +158,7 @@ export default function CorporateListingPage() {
                                     <td className="px-4 py-2">
                                         <div className="flex items-center justify-center gap-3">
                                             <button
-                                                onClick={() => handleDelete(corp.id)}
+                                                onClick={() => setDeleteId(corp.id)}
                                                 className="text-red-400 hover:text-red-600 transition-colors"
                                             >
                                                 <Trash2 size={13} />
@@ -179,6 +184,48 @@ export default function CorporateListingPage() {
                     </div>
                 </div>
             </main>
+
+            {/* Delete Confirmation Modal */}
+            {deleteId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="w-full max-w-md scale-100 transform rounded-xl bg-white p-6 shadow-2xl transition-all">
+                        <div className="mb-4 flex items-center justify-center">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                                <AlertTriangle className="h-6 w-6 text-red-600" />
+                            </div>
+                        </div>
+                        <div className="text-center">
+                            <h3 className="text-lg font-bold text-gray-900">Confirm Deletion</h3>
+                            <p className="mt-2 text-sm text-gray-500">
+                                Are you sure you want to delete this corporate customer? This action will permanently remove all data from both the local cache and the cloud database.
+                            </p>
+                        </div>
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                onClick={() => setDeleteId(null)}
+                                className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                                disabled={isDeleting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 shadow-sm transition-colors flex items-center justify-center gap-2"
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? (
+                                    <>
+                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    "Delete Customer"
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
