@@ -159,7 +159,7 @@ export function SetupStatus({ engine }: { engine: ReturnType<typeof useCorporate
                             </button>
                         </div>
                         <div className="p-6 space-y-4">
-                            <p className="text-[15px] font-medium text-gray-800">Select Group admins to send invite link:</p>
+                            <p className="text-[15px] font-medium text-gray-800">Select Group Admins to send invite link:</p>
                             <div className="space-y-3 pl-2">
                                 <label className="flex items-start gap-3 cursor-pointer group">
                                     <input
@@ -171,7 +171,7 @@ export function SetupStatus({ engine }: { engine: ReturnType<typeof useCorporate
                                         <span className="text-[14px] text-gray-800 font-medium">
                                             {corporate.contacts?.[0]
                                                 ? `${corporate.contacts[0].firstName} ${corporate.contacts[0].lastName}`
-                                                : "Corporate executive"}
+                                                : "Corporate Executive"}
                                         </span>
                                         <span className="text-[14px] text-gray-600 font-medium font-mono">
                                             &#123;{corporate.contacts?.[0]?.email || corporate.contactEmail || "admin@example.com"}&#125;
@@ -201,13 +201,13 @@ export function SetupStatus({ engine }: { engine: ReturnType<typeof useCorporate
                         </div>
                         <div className="p-10 flex flex-col items-center justify-center space-y-8">
                             <p className="text-[15px] font-bold text-gray-600 text-center leading-relaxed">
-                                Corporate profile created and sent to corporate <br /> plan administrators for approval
+                                Corporate Profile created and sent to Corporate <br /> Plan Administrators for approval
                             </p>
                             <button
                                 onClick={() => setSetupStage("OVERVIEW")}
                                 className="px-6 py-2 bg-[#042c5c] rounded text-[12px] font-black text-white shadow-md hover:bg-slate-800 transition-all uppercase"
                             >
-                                Ok
+                                OK
                             </button>
                         </div>
                     </div>

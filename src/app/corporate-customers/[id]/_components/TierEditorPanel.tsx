@@ -395,7 +395,7 @@ export function TierEditorPanel({
                                 <div key={cat.id} className="w-72 space-y-2">
                                     <button onClick={() => toggleCat(cat.id)} className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-1.5 text-xs text-gray-700 font-bold bg-white hover:bg-gray-50 transition-colors shadow-sm">
                                         <span className="truncate">{cat.name}</span>
-                                        <ChevronDown size={14} className={clsx("text-gray-400 Transition-transform", openCats[cat.id] && "rotate-180")} />
+                                        <ChevronDown size={14} className={clsx("text-gray-400 transition-transform", openCats[cat.id] && "rotate-180")} />
                                     </button>
                                     {openCats[cat.id] && (
                                         <div className="border border-gray-200 rounded p-2 bg-gray-50/50 space-y-2 max-h-96 overflow-y-auto">
@@ -409,13 +409,13 @@ export function TierEditorPanel({
 
                     {/* 4. Core Plans */}
                     <div className="border border-gray-300 rounded-sm bg-white p-4 space-y-4 shadow-sm">
-                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Core Plans (100% premium paid directly by employer)</p>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Core Plans (100% Premium Paid Directly by Employer)</p>
                         <div className="flex gap-4 items-start overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300">
                             {PLAN_CATEGORIES.CORE.map(cat => (
                                 <div key={cat.id} className="min-w-[320px] max-w-[350px] space-y-3">
                                     <button onClick={() => toggleCat(cat.id)} className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-1.5 text-xs text-[#1e3a5f] font-bold bg-white hover:bg-blue-50/30 transition-colors shadow-sm">
                                         <span className="truncate">{cat.name}</span>
-                                        <ChevronDown size={14} className={clsx("text-gray-400 Transition-transform", openCats[cat.id] && "rotate-180")} />
+                                        <ChevronDown size={14} className={clsx("text-gray-400 transition-transform", openCats[cat.id] && "rotate-180")} />
                                     </button>
                                     {openCats[cat.id] && (
                                         <div className="space-y-3">
@@ -445,7 +445,7 @@ export function TierEditorPanel({
                     {/* 5. Upgrade Plans Bar */}
                     <div className="border border-gray-300 rounded-sm bg-white overflow-hidden shadow-sm">
                         <div className="p-3 border-b border-gray-100 flex items-center justify-between">
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Upgrade Plans (Premium difference paid by employee through payroll deduction).</p>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Upgrade Plans (Premium difference paid by employee through payroll deduction)</p>
                             <div className="flex items-center gap-4 text-[11px] font-bold text-[#1e3a5f]">
                                 <span>Enabled?</span>
                                 <div className="flex gap-3">
@@ -480,7 +480,7 @@ export function TierEditorPanel({
                                     <div key={cat.id} className="min-w-[320px] max-w-[350px] space-y-3">
                                         <button onClick={() => toggleCat(cat.id)} className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-1.5 text-xs text-[#1e3a5f] font-bold bg-white hover:bg-blue-50/30 transition-colors shadow-sm">
                                             <span className="truncate">{cat.name}</span>
-                                            <ChevronDown size={14} className={clsx("text-gray-400 Transition-transform", openCats[cat.id] && "rotate-180")} />
+                                            <ChevronDown size={14} className={clsx("text-gray-400 transition-transform", openCats[cat.id] && "rotate-180")} />
                                         </button>
                                         {openCats[cat.id] && (
                                             <div className="space-y-3">
@@ -511,7 +511,7 @@ export function TierEditorPanel({
                     {/* 6. Voluntary Plans */}
                     <div className="border border-gray-300 rounded-sm bg-white overflow-hidden shadow-sm">
                         <div className="p-3 border-b border-gray-100 flex items-center justify-between">
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Voluntary Plans (100% Premium paid directly by employee)</p>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Voluntary Plans (100% Premium Paid Directly by Employee)</p>
                             <div className="flex items-center gap-4 text-[11px] font-bold text-[#1e3a5f]">
                                 <span>Enabled?</span>
                                 <div className="flex gap-3">
@@ -540,7 +540,7 @@ export function TierEditorPanel({
                                     <div key={cat.id} className="min-w-[320px] max-w-[350px] space-y-3">
                                         <button onClick={() => toggleCat(cat.id)} className="w-full flex items-center justify-between border border-gray-300 rounded px-3 py-1.5 text-xs text-[#1e3a5f] font-bold bg-white hover:bg-blue-50/30 transition-colors shadow-sm">
                                             <span className="truncate">{cat.name}</span>
-                                            <ChevronDown size={14} className={clsx("text-gray-400 Transition-transform", openCats[cat.id] && "rotate-180")} />
+                                            <ChevronDown size={14} className={clsx("text-gray-400 transition-transform", openCats[cat.id] && "rotate-180")} />
                                         </button>
                                         {openCats[cat.id] && (
                                             <div className="space-y-3">

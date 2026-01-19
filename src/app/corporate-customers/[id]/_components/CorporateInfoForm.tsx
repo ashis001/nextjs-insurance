@@ -311,11 +311,11 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             {/* Enrollment Section */}
             <div>
                 <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">Enrollment start date for new hires</h3>
+                    <h3 className="text-sm font-semibold text-white">Enrollment Start Date for New Hires</h3>
                 </div>
                 <div className="bg-white p-4 flex gap-8">
                     <div className="flex-1">
-                        <label className="block text-xs text-gray-600 mb-2 font-medium">Waiting period for Employees on initial enrollment</label>
+                        <label className="block text-xs text-gray-600 mb-2 font-medium">Waiting Period for Initial Enrollment</label>
                         <div className="flex gap-6 items-center">
                             <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                                 <input type="radio" value="yes" {...register("waitingPeriodInitial")} className="text-blue-600 focus:ring-blue-500" /> Yes
@@ -328,7 +328,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     </div>
 
                     <div className="flex-[2]">
-                        <label className="block text-xs text-gray-600 mb-2 font-medium">Waiting period for new hires</label>
+                        <label className="block text-xs text-gray-600 mb-2 font-medium">Waiting Period for New Hires</label>
                         <div className="flex gap-4 items-center">
                             {["None", "Three Months", "Six Months", "Custom"].map(opt => (
                                 <label key={opt} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
@@ -344,7 +344,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             {/* Define Plan Coverage */}
             <div>
                 <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">Define Plan Coverage tiers for employees?</h3>
+                    <h3 className="text-sm font-semibold text-white">Define Plan Coverage Tiers for Employees?</h3>
                 </div>
                 <div className="bg-white p-4">
                     <div className="flex gap-6 items-center">
@@ -401,7 +401,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                         </div>
                         <div>
                             <div className="bg-[#1e3a5f] px-4 py-2">
-                                <h3 className="text-sm font-semibold text-white">No. of Employees</h3>
+                                <h3 className="text-sm font-semibold text-white">Number of Employees</h3>
                             </div>
                             <div className="bg-white p-4">
                                 <input type="text" {...register("employeeCount")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="0" />
@@ -417,7 +417,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     </div>
                     <div className="bg-white p-4 h-[calc(100%-40px)] flex items-center justify-center">
                         <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center text-center p-4 hover:bg-gray-50 cursor-pointer">
-                            <span className="text-xs text-gray-500">Click to upload COMPANY LOGO Max. 300x100 px .png .jpg</span>
+                            <span className="text-xs text-gray-500">Click to upload company logo. Max 300x100 px (.png, .jpg)</span>
                         </div>
                     </div>
                 </div>

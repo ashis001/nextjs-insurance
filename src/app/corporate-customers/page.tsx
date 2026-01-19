@@ -113,9 +113,9 @@ export default function CorporateListingPage() {
                                 <th className="px-4 py-3 w-8"></th>
                                 <th className="px-4 py-3 border-r border-gray-200">Name</th>
                                 <th className="px-4 py-3 border-r border-gray-200">Broker/Advisor Name</th>
-                                <th className="px-4 py-3 border-r border-gray-200 text-center">Employer profiles</th>
+                                <th className="px-4 py-3 border-r border-gray-200 text-center">Employer Profiles</th>
                                 <th className="px-4 py-3 border-r border-gray-200 text-center">Plan Headcount</th>
-                                <th className="px-4 py-3 border-r border-gray-200">Corporate admin email</th>
+                                <th className="px-4 py-3 border-r border-gray-200">Corporate Admin Email</th>
                                 <th className="px-4 py-3 border-r border-gray-200 text-center">Admin Approved</th>
                                 <th className="px-4 py-3 text-center">Actions</th>
                             </tr>
@@ -126,7 +126,7 @@ export default function CorporateListingPage() {
                                     <td colSpan={8} className="px-4 py-16 text-center">
                                         <div className="flex flex-col items-center justify-center text-gray-400">
                                             <p className="text-sm font-medium">No records found</p>
-                                            <p className="text-[10px]">Click "Add New" to create your first corporate customer</p>
+                                            <p className="text-[10px]">Click "Add New Customer" to create your first corporate customer</p>
                                         </div>
                                     </td>
                                 </tr>
