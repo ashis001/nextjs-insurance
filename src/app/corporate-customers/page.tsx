@@ -12,8 +12,22 @@ export default function CorporateListingPage() {
     const [corporates, setCorporates] = useState<Corporate[]>([]);
 
     const loadCorporatesList = async () => {
-        const data = await fetchAllCorporates();
-        setCorporates(data);
+        // 1. Load from Supabase (Cloud)
+        const cloudData = await fetchAllCorporates();
+
+        // 2. Load from LocalStorage (Cache)
+        const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
+        const cachedData = masterList.map((id: string) => {
+            const item = localStorage.getItem(`corp_${id}`);
+            return item ? JSON.parse(item) : null;
+        }).filter(Boolean) as Corporate[];
+
+        // 3. Merge them (Cloud data takes priority for the same ID)
+        const combinedMap = new Map<string, Corporate>();
+        cachedData.forEach(c => combinedMap.set(c.id, c));
+        cloudData.forEach(c => combinedMap.set(c.id, c));
+
+        setCorporates(Array.from(combinedMap.values()));
     };
 
     useEffect(() => {
@@ -21,9 +35,17 @@ export default function CorporateListingPage() {
     }, []);
 
     const handleDelete = async (id: string) => {
-        if (confirm("Are you sure you want to delete this corporate customer? It will be removed from the cloud database.")) {
+        if (confirm("Are you sure you want to delete this corporate customer? it will be removed from both cache and cloud.")) {
             try {
+                // Delete from Cloud
                 await deleteCorporate(id);
+
+                // Delete from Cache
+                localStorage.removeItem(`corp_${id}`);
+                const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
+                const newList = masterList.filter((mId: string) => mId !== id);
+                localStorage.setItem('corp_master_list', JSON.stringify(newList));
+
                 await loadCorporatesList();
             } catch (err) {
                 alert("Failed to delete corporate.");

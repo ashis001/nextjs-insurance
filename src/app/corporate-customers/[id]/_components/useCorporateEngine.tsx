@@ -67,29 +67,32 @@ export function useCorporateEngine(corporateId: string) {
     const [corporate, setCorporate] = useState<Corporate>({ ...INITIAL_STATE, id: corporateId });
     const [isSaving, setIsSaving] = useState(false);
 
-    // Load existing state from Supabase
+    // 1. CACHE: Load from local cache immediately for speed
     useEffect(() => {
-        const load = async () => {
-            if (corporateId === "new-corp") return;
-            const saved = await fetchCorporateById(corporateId);
-            if (saved) {
-                setCorporate(saved);
-            }
-        };
-        load();
+        const saved = localStorage.getItem(`corp_${corporateId}`);
+        if (saved) {
+            setCorporate(JSON.parse(saved));
+        } else if (corporateId !== "new-corp") {
+            // If not in cache, try fetching from Supabase
+            const loadFromCloud = async () => {
+                const cloudData = await fetchCorporateById(corporateId);
+                if (cloudData) setCorporate(cloudData);
+            };
+            loadFromCloud();
+        }
     }, [corporateId]);
 
-    // Automatically save to Supabase cloud on every change (with basic debounce)
+    // 2. CACHE: Automatically save to local cache on every single change
     useEffect(() => {
-        if (corporate.id !== "new-corp" && corporate.name) {
-            const timer = setTimeout(async () => {
-                try {
-                    await upsertCorporate(corporate);
-                } catch (err) {
-                    console.error("Cloud save failed", err);
-                }
-            }, 1000); // 1s debounce
-            return () => clearTimeout(timer);
+        if (corporate.id !== "new-corp") {
+            localStorage.setItem(`corp_${corporate.id}`, JSON.stringify(corporate));
+
+            // Maintain a local master list for the listing page (offline support)
+            const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
+            if (!masterList.includes(corporate.id)) {
+                masterList.push(corporate.id);
+                localStorage.setItem('corp_master_list', JSON.stringify(masterList));
+            }
         }
     }, [corporate]);
 
@@ -112,11 +115,22 @@ export function useCorporateEngine(corporateId: string) {
     }, []);
 
     const setSetupStage = useCallback(async (newStage: SetupStage) => {
-        setIsSaving(true);
-        // Persist current state before moving
-        await upsertCorporate(corporate);
-        setCorporate((prev) => ({ ...prev, stage: newStage }));
-        setIsSaving(false);
+        try {
+            setIsSaving(true);
+
+            // If we are reaching the final "OVERVIEW" stage, push everything to Supabase
+            if (newStage === "OVERVIEW") {
+                await upsertCorporate(corporate);
+            }
+
+            setCorporate((prev) => ({ ...prev, stage: newStage }));
+        } catch (error) {
+            console.error("Error during stage transition:", error);
+            // Even if cloud save fails, let the user move to the next stage in the UI
+            setCorporate((prev) => ({ ...prev, stage: newStage }));
+        } finally {
+            setIsSaving(false);
+        }
     }, [corporate]);
 
     // -- Validation & Transitions --
