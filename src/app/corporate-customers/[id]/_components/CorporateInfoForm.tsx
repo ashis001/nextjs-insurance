@@ -271,7 +271,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             {/* Group Contacts Section */}
             <div>
                 <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">Hr Benefits Contacts</h3>
+                    <h3 className="text-sm font-semibold text-white">HR Benefits Contacts</h3>
                 </div>
                 <div className="bg-white p-4 space-y-3">
                     {fields.map((field, index) => (
@@ -375,7 +375,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                                     <input type="radio" value="Credit Card" {...register("paymentMethod")} className="text-blue-600" /> Credit Card
                                 </label>
                                 <label className="flex items-center gap-2 text-sm text-gray-700">
-                                    <input type="radio" value="Pre Authorized Debit" {...register("paymentMethod")} className="text-blue-600" /> Pre Authorized Debit
+                                    <input type="radio" value="Pre Authorized Debit" {...register("paymentMethod")} className="text-blue-600" /> Pre-Authorized Debit
                                 </label>
                                 {errors.paymentMethod && <span className="text-xs text-red-500 font-bold ml-2">*{errors.paymentMethod.message}</span>}
                             </div>
