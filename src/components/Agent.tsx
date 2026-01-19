@@ -25,7 +25,7 @@ export default function Agent() {
       console.log("🎉 AgenQ SDK detected → mounting");
 
       // Pass agentId
-      window.AGENQ.render({ agentId: "6d941c2f-1916-4f81-b22c-10599d071081" });
+      window.AGENQ.render({ agentId: "e66326f6-b667-4776-ab55-e5912f3acbfe" });
     }
 
     tryMount();
