@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useMemo } from "react";
 import { useForm, useFieldArray, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -49,7 +50,7 @@ export type FormValues = z.infer<typeof corporateSchema>;
 export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCorporateEngine> }) {
     const { corporate, updateCorporateInfo, isSaving } = engine;
 
-    const defaultValues: FormValues = {
+    const defaultValues: FormValues = useMemo(() => ({
         broker: corporate.broker || "",
         selectProfile: corporate.selectProfile || "",
         paymentPlatform: corporate.paymentPlatform || "AuthorizeNet",
@@ -78,7 +79,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
         paymentMethod: corporate.paymentMethod || "",
         showEmployerName: corporate.showEmployerName === null ? "" : (corporate.showEmployerName ? "yes" : "no"),
         employeeCount: corporate.employeeCount === null ? "" : corporate.employeeCount,
-    };
+    }), [corporate]);
 
     const { register, control, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
         resolver: zodResolver(corporateSchema) as any,
