@@ -35,10 +35,12 @@ export default function Agent() {
 
   return (
     <>
-      <div id="agenq-root" ref={slotRef} />
+      <div id='agenq-root' ref={slotRef} />
       <Script
-        src={"http://localhost:4179/agenq-client-cdn.js"}
-        strategy="afterInteractive"
+        src={
+          "https://cdnstaticfiles.blob.core.windows.net/cdn/clientsdk/agenq-client-sdk--dev.js"
+        }
+        strategy='afterInteractive'
       />
     </>
   );
