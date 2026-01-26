@@ -6,7 +6,13 @@ import Script from "next/script";
 declare global {
   interface Window {
     AGENQ?: {
-      render: (options?: { agentId?: string }) => void;
+      render: (options?: {
+        agentId?: string;
+        projectId?: string;
+        customerCode?: string;
+        customerId?: string;
+        apiKey?: string;
+      }) => void;
     };
   }
 }
@@ -25,7 +31,13 @@ export default function Agent() {
       console.log("🎉 AgenQ SDK detected → mounting");
 
       // Pass agentId
-      window.AGENQ.render({ agentId: "e66326f6-b667-4776-ab55-e5912f3acbfe" });
+      window.AGENQ.render({
+        agentId: "02abf12e-0d8b-4e3a-97ae-d17b7ec7fa3c",
+        projectId: "07af2445-cbf6-40bc-8bd5-efe044600806",
+        customerCode: "DEMO-PRODUCTION",
+        customerId: "8add3115-5470-4693-9396-a10a7b253c18",
+        apiKey: "234kj3lkj4",
+      });
     }
 
     tryMount();
@@ -38,7 +50,7 @@ export default function Agent() {
       <div id='agenq-root' ref={slotRef} />
       <Script
         src={
-          "https://cdnstaticfiles.blob.core.windows.net/cdn/clientsdk/agenq-client-sdk--dev.js"
+          "https://cdnstaticfiles.blob.core.windows.net/cdn/clientsdk/agenq-client-sdk.js"
         }
         strategy='afterInteractive'
       />
