@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 
 declare global {
@@ -19,6 +19,8 @@ declare global {
 
 export default function Agent() {
   const slotRef = useRef<HTMLDivElement | null>(null);
+  const [loading, setLoading] = useState(true); // ✅ loader state
+
   const mounted = useRef(false);
 
   useEffect(() => {
@@ -28,6 +30,14 @@ export default function Agent() {
       if (mounted.current) return;
 
       mounted.current = true;
+
+      const key = Object.keys(localStorage).find((k) =>
+        k.startsWith("agent-mount-state"),
+      );
+
+      if (key) {
+        localStorage.setItem(key, "OPEN");
+      }
       console.log("🎉 AgenQ SDK detected → mounting");
 
       // Pass agentId
@@ -38,6 +48,8 @@ export default function Agent() {
         customerId: "8add3115-5470-4693-9396-a10a7b253c18",
         apiKey: "234kj3lkj4",
       });
+
+      setLoading(false);
     }
 
     tryMount();
@@ -47,6 +59,12 @@ export default function Agent() {
 
   return (
     <>
+      {loading && (
+        <div className='fixed inset-0 flex items-center justify-center bg-white z-50'>
+          <div className='h-12 w-12 border-4 border-gray-300 border-t-black rounded-full animate-spin' />
+        </div>
+      )}
+
       <div id='agenq-root' ref={slotRef} />
       <Script
         src={
