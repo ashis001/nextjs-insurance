@@ -24,28 +24,8 @@ export default function RootLayout({
   return (
     <html lang='en'>
       <body className={`${inter.variable} antialiased`}>
+        {children}
         <AgentProvider />
-
-        <div className='min-h-screen flex'>
-          {/* Left sidebar */}
-          <aside className='w-80 border-r bg-white hidden md:flex'>
-            <div className='p-4 w-full'>
-              <Agent />
-            </div>
-          </aside>
-
-          {/* Main content */}
-          <main className='flex-1 bg-gray-50'>
-            <div className='max-w-7xl mx-auto p-6'>{children}</div>
-          </main>
-
-          {/* Right Agent UI */}
-          <aside className='w-96 border-l bg-white hidden lg:flex flex-col'>
-            <div className='p-4 w-full'>
-              <AgentUI />
-            </div>
-          </aside>
-        </div>
       </body>
     </html>
   );
