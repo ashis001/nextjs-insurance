@@ -3,7 +3,9 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Agent from "@/components/Agent";
 import AgentProvider from "@/components/AgentProvider";
-import AgentUI from "@/components/AgentUi";
+import { ChatProvider } from "@/context/ChatContext";
+import RightChatPanel from "@/components/RightChatPanel";
+import PageWrapper from "@/components/PageWrapper";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -24,8 +26,13 @@ export default function RootLayout({
   return (
     <html lang='en'>
       <body className={`${inter.variable} antialiased`}>
-        {children}
-        <AgentProvider />
+        <ChatProvider>
+          <PageWrapper>
+            {children}
+            <AgentProvider />
+          </PageWrapper>
+          <RightChatPanel />
+        </ChatProvider>
       </body>
     </html>
   );
