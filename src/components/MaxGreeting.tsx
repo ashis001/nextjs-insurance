@@ -6,31 +6,44 @@ import { useChat } from "@/context/ChatContext";
 import { speakText } from "@/lib/google-tts";
 
 export default function MaxGreeting() {
-    const { openChat, isOpen } = useChat();
+    const { openChat, isOpen, hasGreeted, setHasGreeted } = useChat();
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
-        // Only run this logic if we are NOT currently open
-        if (isOpen) {
-            setIsVisible(false);
+        // Only run this logic if we are NOT currently open and haven't shown yet in this session
+        if (isOpen || hasGreeted) {
             return;
         }
 
-        const hasShownInSession = sessionStorage.getItem("max_greeted_session");
+        const triggerSpeech = () => {
+            speakText("Hi, I’m Max. Your Assistant. Ask me anything");
+            window.removeEventListener('click', triggerSpeech);
+            window.removeEventListener('keydown', triggerSpeech);
+        };
 
-        if (!hasShownInSession) {
-            const timer = setTimeout(() => {
-                // Double check isOpen before showing
-                if (!sessionStorage.getItem("max_greeted_session")) {
-                    setIsVisible(true);
-                    sessionStorage.setItem("max_greeted_session", "true");
+        const timer = setTimeout(() => {
+            if (!isOpen && !hasGreeted) {
+                setIsVisible(true);
+                setHasGreeted(true);
+                sessionStorage.setItem("max_greeted_session", "true");
+
+                // If the user has already interacted, speak immediately
+                if (navigator.userActivation?.isActive) {
                     speakText("Hi, I’m Max. Your Assistant. Ask me anything");
+                } else {
+                    // Otherwise, wait for the first click or keypress
+                    window.addEventListener('click', triggerSpeech);
+                    window.addEventListener('keydown', triggerSpeech);
                 }
-            }, 1500);
+            }
+        }, 1500);
 
-            return () => clearTimeout(timer);
-        }
-    }, [isOpen]);
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('click', triggerSpeech);
+            window.removeEventListener('keydown', triggerSpeech);
+        };
+    }, [isOpen, hasGreeted, setHasGreeted]);
 
     // If chat is opened while we are visible, hide immediately
     useEffect(() => {
@@ -48,12 +61,16 @@ export default function MaxGreeting() {
                 <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none" />
 
                 <div className="relative z-10 flex flex-col items-center">
-                    {/* Minimalist Icon */}
+                    {/* AI Profile Image */}
                     <div className="relative mb-8">
-                        <div className="w-20 h-20 rounded-3xl bg-blue-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
-                            <Sparkles className="w-10 h-10" />
+                        <div className="w-24 h-24 rounded-[32px] overflow-hidden shadow-2xl shadow-blue-500/20 border-4 border-white">
+                            <img
+                                alt="Max AI"
+                                src="https://cdnstaticfiles.blob.core.windows.net/cdnstaticfiles/agent_images/577c9033ea4a4f26a23d25e0c2d857d9_female5.jpg"
+                                className="w-full h-full object-cover object-top"
+                            />
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full animate-pulse shadow-md" />
+                        <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-500 border-4 border-white rounded-full animate-pulse shadow-lg" />
                     </div>
 
                     {/* Typography */}

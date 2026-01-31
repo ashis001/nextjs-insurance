@@ -63,21 +63,47 @@ export async function synthesizeSpeech(text: string, options: TTSOptions = {}): 
     }
 }
 
+// Global variable to keep track of the current audio being played
+let currentAudio: HTMLAudioElement | null = null;
+
 /**
  * Plays the synthesized speech using the browser's Audio object.
  * @param audioContent Base64 encoded audio content
  */
 export function playAudio(audioContent: string): Promise<void> {
+    // If there is already audio playing, stop it first
+    stopSpeech();
+
     return new Promise((resolve, reject) => {
         try {
             const audio = new Audio(`data:audio/mp3;base64,${audioContent}`);
-            audio.onended = () => resolve();
-            audio.onerror = (e) => reject(e);
+            currentAudio = audio;
+
+            audio.onended = () => {
+                currentAudio = null;
+                resolve();
+            };
+            audio.onerror = (e) => {
+                currentAudio = null;
+                reject(e);
+            };
             audio.play();
         } catch (error) {
+            currentAudio = null;
             reject(error);
         }
     });
+}
+
+/**
+ * Stops any currently playing audio.
+ */
+export function stopSpeech(): void {
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+        currentAudio = null;
+    }
 }
 
 /**

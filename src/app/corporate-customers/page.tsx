@@ -24,7 +24,7 @@ const AnimatedGrid = () => (
 );
 
 export default function CorporateListingPage() {
-    const { toggleChat } = useChat();
+    const { toggleChat, openChat } = useChat();
     const [searchTerm, setSearchTerm] = useState("");
     const [corporates, setCorporates] = useState<Corporate[]>([]);
     const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export default function CorporateListingPage() {
         if (guideStep === "add_customer") {
             const timer = setTimeout(() => {
                 setActiveGuide("add_customer");
-                speakText("Let’s start by creating the company profile.");
+                openChat("Let’s start by creating the company profile.");
                 localStorage.removeItem("max_guide_step");
             }, 800);
             return () => clearTimeout(timer);
@@ -101,7 +101,7 @@ export default function CorporateListingPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={toggleChat}
+                            onClick={() => openChat("Hi, I’m Max. Your Assistant. Ask me anything")}
                             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all hover:-translate-y-0.5 font-bold text-xs">
                             <Sparkles className="w-4 h-4" />
                             Ask Max
@@ -111,7 +111,7 @@ export default function CorporateListingPage() {
 
                 <div className="relative z-10 p-8 space-y-6 animate-fade-in">
                     {/* Controls Bar */}
-                    <div className="flex justify-between items-center bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="relative z-50 flex justify-between items-center bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-slate-200 shadow-sm">
                         <div className="w-full flex max-w-md">
                             <div className="relative group w-full">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
@@ -135,7 +135,10 @@ export default function CorporateListingPage() {
                             </Link>
 
                             {activeGuide === "add_customer" && (
-                                <MaxGuidePointer text="Click here to start your onboarding guide" />
+                                <MaxGuidePointer
+                                    text="Click here to start your onboarding guide"
+                                    targetUrl={`/corporate-customers/${newId}`}
+                                />
                             )}
                         </div>
                     </div>

@@ -39,7 +39,7 @@ const AnimatedGrid = () => (
 );
 
 export default function DashboardPage() {
-  const { toggleChat } = useChat();
+  const { toggleChat, openChat } = useChat();
   const [timeRange, setTimeRange] = useState<"Today" | "This Week" | "This Month">("Today");
   const [mounted, setMounted] = useState(false);
 
@@ -90,7 +90,7 @@ export default function DashboardPage() {
 
             <div className='flex items-center gap-3'>
               <button
-                onClick={toggleChat}
+                onClick={() => openChat("Hi, I’m Max. Your Assistant. Ask me anything")}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all hover:-translate-y-0.5 font-bold text-xs">
                 <Sparkles className="w-4 h-4" />
                 Ask Max
