@@ -36,11 +36,11 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                 />
             )}
             {/* Header Navy Bar */}
-            <div className="bg-[#1e3a5f] px-4 py-2 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">Manage Tiers</h2>
+            <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl flex items-center justify-between">
+                <h2 className="text-xs font-black uppercase tracking-widest text-white/90">Manage Tiers</h2>
                 <button
                     onClick={handleAddTier}
-                    className="flex items-center gap-1 bg-white text-[#1e3a5f] px-2 py-0.5 rounded text-xs font-bold hover:bg-gray-100 transition-colors"
+                    className="flex items-center gap-1 bg-white text-[#0a1e3b] px-3 py-1 rounded-md text-[10px] font-black uppercase hover:bg-gray-100 transition-colors shadow-sm"
                 >
                     <Plus className="h-3 w-3" /> Add Tier
                 </button>
@@ -153,18 +153,18 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
             </div>
 
             {/* Footer Buttons */}
-            <div className="fixed bottom-4 left-64 right-6 px-4 flex justify-between bg-white/80 backdrop-blur-sm py-2">
+            <div className="flex justify-between pt-6">
                 <button
                     onClick={() => setSetupStage("CORPORATE_INFO")}
-                    className="flex items-center gap-1 rounded bg-[#1e3a5f] px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-slate-800 transition-all active:scale-95"
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all hover:-translate-y-0.5"
                 >
-                    <ChevronLeft className="h-3 w-3" /> Previous
+                    <ChevronLeft className="h-4 w-4" /> Previous
                 </button>
                 <button
                     onClick={() => attemptAdvance()}
-                    className="flex items-center gap-1 rounded bg-[#1e3a5f] px-3 py-1.5 text-xs font-bold text-white shadow hover:bg-slate-800 transition-all active:scale-95"
+                    className="flex items-center gap-1.5 rounded-xl bg-[#0a1e3b] px-6 py-2.5 text-xs font-bold text-white hover:bg-blue-900 shadow-lg shadow-blue-900/20 transition-all hover:-translate-y-0.5"
                 >
-                    Next <ChevronRight className="h-3 w-3" />
+                    Next <ChevronRight className="h-4 w-4" />
                 </button>
             </div>
         </div>

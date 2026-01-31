@@ -2,9 +2,11 @@
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { X, Send, Paperclip, Settings, MessageSquare, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useChat } from "@/context/ChatContext";
 import { fetchAllCorporates } from "@/lib/db";
 import { Corporate } from "@/lib/types";
+import { speakText } from "@/lib/google-tts";
 import clsx from "clsx";
 
 interface Message {
@@ -12,19 +14,45 @@ interface Message {
     text: string;
     sender: "user" | "assistant";
     timestamp: string;
+    actions?: { label: string; value: string }[];
 }
 
 export default function RightChatPanel() {
-    const { isOpen, closeChat, width, updateWidth } = useChat();
+    const router = useRouter();
+    const { isOpen, closeChat, width, updateWidth, externalMessage, clearExternalMessage } = useChat();
     const [inputValue, setInputValue] = useState("");
     const [messages, setMessages] = useState<Message[]>([
         {
             id: "1",
-            text: "Hello! I'm **Max**, your AI assistant. I have access to your corporate customer data. How can I help you today?",
+            text: "Hi, I'm **Max**. Your Assistant. Ask me anything",
             sender: "assistant",
             timestamp: "" // Initialize empty to prevent hydration mismatch
         }
     ]);
+
+    // Handle External Message Injection
+    useEffect(() => {
+        if (externalMessage && isOpen) {
+            const timer = setTimeout(async () => {
+                const msg: Message = {
+                    id: Date.now().toString(),
+                    text: externalMessage,
+                    sender: "assistant",
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+                setMessages(prev => [...prev, msg]);
+
+                // Speak the main message first
+                await speakText(externalMessage);
+
+                // Then speak the instruction follow-up
+                await speakText("You can talk to or you can type text here.");
+
+                clearExternalMessage();
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [externalMessage, isOpen, clearExternalMessage]);
     const [isTyping, setIsTyping] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
     const isResizingRef = useRef(false);
@@ -82,12 +110,13 @@ export default function RightChatPanel() {
         };
     }, [isResizing, handleMouseMove, stopResizing]);
 
-    const handleSend = async () => {
-        if (!inputValue.trim()) return;
+    const handleSend = async (overrideValue?: string) => {
+        const textToSend = overrideValue || inputValue;
+        if (!textToSend.trim()) return;
 
         const userMsg: Message = {
             id: Date.now().toString(),
-            text: inputValue,
+            text: textToSend,
             sender: "user",
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -99,11 +128,46 @@ export default function RightChatPanel() {
         // Simulate AI Thinking & Data Fetching
         setTimeout(async () => {
             const corporates = await fetchAllCorporates();
-            const query = userMsg.text.toLowerCase();
+            const query = textToSend.toLowerCase();
 
             let responseText = "";
 
             // --- KNOWLEDGE BASE LOGIC (Analyzing Project Workflows) ---
+            if (query.includes("onboard") || query.includes("onboarding")) {
+                responseText = "Got it. You want to know how to create a new customer or organization.";
+
+                // First response
+                const firstMsg: Message = {
+                    id: (Date.now() + 1).toString(),
+                    text: responseText,
+                    sender: "assistant",
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+                setMessages(prev => [...prev, firstMsg]);
+                setIsTyping(false);
+                await speakText(responseText); // Await completion of first speech
+
+                // Visual pause before follow-up
+                setIsTyping(true);
+                await new Promise(resolve => setTimeout(resolve, 800));
+
+                const followUpText = "Would you like to do a sample onboarding first?";
+                const followUpMsg: Message = {
+                    id: (Date.now() + 2).toString(),
+                    text: followUpText,
+                    sender: "assistant",
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    actions: [
+                        { label: "Use Sample Data", value: "sample" },
+                        { label: "Use Real Customer", value: "real" }
+                    ]
+                };
+                setMessages(prev => [...prev, followUpMsg]);
+                setIsTyping(false);
+                speakText(followUpText);
+                return;
+            }
+
             if (query.includes("how to") || query.includes("steps") || query.includes("guide") || query.includes("add")) {
                 if (query.includes("member")) {
                     responseText = "To add a **New Member**, follow these steps:\n\n" +
@@ -154,6 +218,7 @@ export default function RightChatPanel() {
             };
 
             setMessages(prev => [...prev, assistantMsg]);
+            speakText(assistantMsg.text); // ✅ Now Max speaks every response
             setIsTyping(false);
         }, 1000);
     };
@@ -219,6 +284,33 @@ export default function RightChatPanel() {
                                 : "bg-white text-gray-700 border-gray-200 rounded-tl-none shadow-[0_2px_4px_rgba(0,0,0,0.05)]"
                         )}>
                             {msg.text.split("**").map((part, i) => i % 2 === 1 ? <strong key={i}>{part}</strong> : part)}
+
+                            {/* Action Buttons */}
+                            {msg.actions && (
+                                <div className="mt-4 flex flex-col gap-2">
+                                    {msg.actions.map((action, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => {
+                                                if (action.value === "real") {
+                                                    speakText("This feature is coming soon");
+                                                } else if (action.value === "sample") {
+                                                    localStorage.setItem("max_guide_step", "add_customer");
+                                                    router.push("/corporate-customers");
+                                                } else {
+                                                    handleSend(action.label);
+                                                }
+                                            }}
+                                            className="w-full py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-[#1e3a5f] hover:bg-blue-50 hover:border-blue-200 transition-all text-left flex items-center justify-between group"
+                                        >
+                                            {action.label}
+                                            <div className="w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-blue-400 group-hover:text-blue-600 transition-colors">
+                                                →
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <span className={clsx("text-[10px] font-bold uppercase tracking-wider", msg.sender === "user" ? "text-gray-500 mr-1" : "text-gray-400 ml-1")}>
                             {msg.sender === "assistant" ? "Assistant" : "You"} • {msg.timestamp}

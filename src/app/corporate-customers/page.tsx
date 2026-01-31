@@ -1,54 +1,70 @@
 "use client";
 
 import { Sidebar } from "./[id]/_components/Sidebar";
-import { Plus, Info, Trash2, Edit2, Check, AlertTriangle, X } from "lucide-react";
+import { Plus, Info, Trash2, Edit2, AlertTriangle, Search, Filter, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useChat } from "@/context/ChatContext";
 import { fetchAllCorporates, deleteCorporate } from "@/lib/db";
 import { Corporate } from "@/lib/types";
+import { speakText } from "@/lib/google-tts";
+import MaxGuidePointer from "@/components/MaxGuidePointer";
+
+// Animated Grid Component
+const AnimatedGrid = () => (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+        <div
+            className="absolute inset-0"
+            style={{
+                backgroundImage: `radial-gradient(circle at 2px 2px, rgba(10, 30, 59, 0.15) 1px, transparent 0)`,
+                backgroundSize: '40px 40px',
+            }}
+        />
+    </div>
+);
 
 export default function CorporateListingPage() {
+    const { toggleChat } = useChat();
     const [searchTerm, setSearchTerm] = useState("");
     const [corporates, setCorporates] = useState<Corporate[]>([]);
     const [deleteId, setDeleteId] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    const [activeGuide, setActiveGuide] = useState<string | null>(null);
 
     const loadCorporatesList = async () => {
-        // 1. Load from Supabase (Cloud)
         const cloudData = await fetchAllCorporates();
-
-        // 2. Load from LocalStorage (Cache)
-        const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
-        const cachedData = masterList.map((id: string) => {
-            const item = localStorage.getItem(`corp_${id}`);
-            return item ? JSON.parse(item) : null;
-        }).filter(Boolean) as Corporate[];
-
-        // 3. Merge them (Cloud data takes priority for the same ID)
-        const combinedMap = new Map<string, Corporate>();
-        cachedData.forEach(c => combinedMap.set(c.id, c));
-        cloudData.forEach(c => combinedMap.set(c.id, c));
-
-        setCorporates(Array.from(combinedMap.values()));
+        setCorporates(cloudData);
     };
 
     useEffect(() => {
         loadCorporatesList();
+        setMounted(true);
+
+        // Check for Max's Guide trigger
+        const guideStep = localStorage.getItem("max_guide_step");
+        if (guideStep === "add_customer") {
+            const timer = setTimeout(() => {
+                setActiveGuide("add_customer");
+                speakText("Let’s start by creating the company profile.");
+                localStorage.removeItem("max_guide_step");
+            }, 800);
+            return () => clearTimeout(timer);
+        }
+
+        const handleFocus = () => {
+            loadCorporatesList();
+        };
+
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
     }, []);
 
     const confirmDelete = async () => {
         if (!deleteId) return;
         try {
             setIsDeleting(true);
-            // Delete from Cloud
             await deleteCorporate(deleteId);
-
-            // Delete from Cache
-            localStorage.removeItem(`corp_${deleteId}`);
-            const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
-            const newList = masterList.filter((mId: string) => mId !== deleteId);
-            localStorage.setItem('corp_master_list', JSON.stringify(newList));
-
             await loadCorporatesList();
             setDeleteId(null);
         } catch (err) {
@@ -59,158 +75,190 @@ export default function CorporateListingPage() {
     };
 
     const filtered = corporates.filter(c =>
-        (c.name || "Unnamed").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.name || "New Customer Draft").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (c.contactEmail || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const newId = `corp-${Math.random().toString(36).substr(2, 9)}`;
 
+    if (!mounted) return null;
+
     return (
-        <div className="flex min-h-screen bg-gray-50">
+        <div className="flex min-h-screen bg-gradient-to-tr from-slate-200 via-indigo-50 to-blue-100 font-sans selection:bg-blue-600/10">
             <Sidebar />
-            <main className="flex-1 ml-64 p-6">
-                {/* Header matching screenshot */}
-                <div className="mb-4 bg-[#1e3a5f] p-1.5 px-4 flex justify-between items-center rounded-t shadow-sm">
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-white font-bold text-xs uppercase tracking-wider">Corporate Customers</h2>
-                        <Info size={14} className="text-white/70" />
-                    </div>
-                    <Link
-                        href={`/corporate-customers/${newId}`}
-                        className="bg-white text-[#1e3a5f] px-4 py-1 rounded text-[10px] font-bold uppercase transition-all hover:bg-gray-100 flex items-center gap-1.5"
-                    >
-                        <Plus size={12} /> Add New Customer
-                    </Link>
-                </div>
+            <main className="flex-1 ml-64 relative overflow-hidden flex flex-col">
+                <AnimatedGrid />
 
-                {/* Table Controls */}
-                <div className="bg-white p-4 border border-gray-200 flex justify-between items-center text-[12px] text-gray-600">
-                    <div className="flex items-center gap-2">
-                        <span>Show</span>
-                        <select className="border border-gray-300 rounded px-1 py-0.5 bg-gray-50">
-                            <option>10</option>
-                            <option>25</option>
-                            <option>50</option>
-                        </select>
-                        <span>entries</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span>Search:</span>
-                        <input
-                            type="text"
-                            className="border border-gray-300 rounded px-2 py-0.5 outline-none focus:border-blue-400"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                </div>
+                {/* Dynamic Background Accents */}
+                <div className="absolute top-[-10%] left-[-5%] w-[400px] h-[400px] bg-blue-400/10 rounded-full blur-[100px] pointer-events-none animate-pulse" />
+                <div className="absolute bottom-[-5%] right-[-5%] w-[400px] h-[400px] bg-indigo-400/10 rounded-full blur-[100px] pointer-events-none animate-pulse" />
 
-                {/* Table */}
-                <div className="bg-white border-x border-b border-gray-200 overflow-hidden">
-                    <table className="w-full text-left text-xs">
-                        <thead>
-                            <tr className="bg-gray-100/80 text-gray-600 font-bold border-b border-gray-200">
-                                <th className="px-4 py-3 w-8"></th>
-                                <th className="px-4 py-3 border-r border-gray-200">Name</th>
-                                <th className="px-4 py-3 border-r border-gray-200">Advisor Name</th>
-                                <th className="px-4 py-3 border-r border-gray-200 text-center">Employer Profiles</th>
-                                <th className="px-4 py-3 border-r border-gray-200 text-center">Plan Headcount</th>
-                                <th className="px-4 py-3 border-r border-gray-200">Corporate Admin Email</th>
-                                <th className="px-4 py-3 border-r border-gray-200 text-center">Admin Approved</th>
-                                <th className="px-4 py-3 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {filtered.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="px-4 py-16 text-center">
-                                        <div className="flex flex-col items-center justify-center text-gray-400">
-                                            <p className="text-sm font-medium">No records found</p>
-                                            <p className="text-[10px]">Click "Add New Customer" to create your first corporate customer</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filtered.map((corp) => (
-                                <tr key={corp.id} className="hover:bg-gray-50 transition-colors group">
-                                    <td className="px-4 py-2">
-                                        <div className={`w-2 h-2 rounded-full ${corp.corporateInfoCompleted ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                                    </td>
-                                    <td className="px-4 py-2 font-medium text-blue-600 hover:underline cursor-pointer">
-                                        <Link href={`/corporate-customers/${corp.id}?view=overview`}>
-                                            {corp.name || "(Empty Name)"}
-                                        </Link>
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-700 text-[10px] uppercase font-bold">{corp.broker || "-"}</td>
-                                    <td className="px-4 py-2 text-center font-bold text-blue-600">
-                                        <span className="underline cursor-pointer">{0}</span>
-                                    </td>
-                                    <td className="px-4 py-2 text-center font-bold text-blue-600">
-                                        <span className="underline cursor-pointer tracking-tighter">
-                                            {corp.tiers?.reduce((acc, t) => acc + (t.status === "Active" ? 1 : 0), 0) || 0}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-500 text-[10px] font-medium">{corp.contactEmail || "-"}</td>
-                                    <td className="px-4 py-2 text-center">
-                                        <button className="bg-[#1e3a5f] text-white px-3 py-0.5 rounded text-[8px] font-black uppercase shadow-sm hover:bg-slate-800 transition-all">
-                                            Approve
-                                        </button>
-                                    </td>
-                                    <td className="px-4 py-2">
-                                        <div className="flex items-center justify-center gap-3">
-                                            <button
-                                                onClick={() => setDeleteId(corp.id)}
-                                                className="text-red-400 hover:text-red-600 transition-colors"
-                                            >
-                                                <Trash2 size={13} />
-                                            </button>
-                                            <Link href={`/corporate-customers/${corp.id}`} className="text-blue-400 hover:text-blue-600 transition-colors">
-                                                <Edit2 size={13} />
-                                            </Link>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                {/* Premium Header */}
+                <header className="relative z-20 flex h-20 items-center justify-between border-b border-slate-200/60 bg-white/70 backdrop-blur-md px-8">
+                    <div className="flex flex-col">
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Corporate Customers</h1>
+                        <p className="text-xs text-slate-500 font-medium">Manage enterprise contracts & profiles</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={toggleChat}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all hover:-translate-y-0.5 font-bold text-xs">
+                            <Sparkles className="w-4 h-4" />
+                            Ask Max
+                        </button>
+                    </div>
+                </header>
 
-                {/* Pagination */}
-                <div className="mt-4 flex justify-between items-center text-[12px] text-gray-500 font-medium">
-                    <p>Showing 1 to {filtered.length} of {filtered.length} entries</p>
-                    <div className="flex gap-px shadow-sm rounded overflow-hidden">
-                        <button className="bg-[#1e3a5f] text-white px-3 py-1 hover:bg-slate-800 transition-all font-bold">Previous</button>
-                        <button className="bg-blue-600 text-white px-4 py-1 font-bold">1</button>
-                        <button className="bg-[#1e3a5f] text-white px-3 py-1 hover:bg-slate-800 transition-all font-bold">Next</button>
+                <div className="relative z-10 p-8 space-y-6 animate-fade-in">
+                    {/* Controls Bar */}
+                    <div className="flex justify-between items-center bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-slate-200 shadow-sm">
+                        <div className="w-full flex max-w-md">
+                            <div className="relative group w-full">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Search corporations..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full rounded-xl border border-slate-300 pl-10 pr-4 py-2 text-sm focus:border-blue-500 focus:outline-none shadow-sm bg-white font-medium placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/10 transition-all"
+                                />
+                            </div>
+                        </div>
+                        <div className="relative">
+                            <Link
+                                href={`/corporate-customers/${newId}`}
+                                onClick={() => setActiveGuide(null)}
+                                className="group flex items-center gap-2 rounded-xl bg-[#0a1e3b] px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-900 shadow-lg shadow-blue-900/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
+                            >
+                                <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform" />
+                                Add New Customer
+                            </Link>
+
+                            {activeGuide === "add_customer" && (
+                                <MaxGuidePointer text="Click here to start your onboarding guide" />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Main Table Card */}
+                    <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden">
+                        <div className="bg-[#0a1e3b] px-6 py-4 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md">
+                                    <Info className="w-4 h-4 text-blue-400" />
+                                </div>
+                                <h3 className="text-sm font-bold text-white">Active Corporations</h3>
+                            </div>
+                            <span className="text-[10px] font-bold text-blue-200 bg-blue-900/50 px-3 py-1 rounded-full border border-blue-800">{filtered.length} Total</span>
+                        </div>
+
+                        <div className="bg-white">
+                            <table className="w-full text-left text-sm">
+                                <thead>
+                                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                                        <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500 w-12">Status</th>
+                                        <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500">Name</th>
+                                        <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500">Advisor</th>
+                                        <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500 text-center">Profiles</th>
+                                        <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500 text-center">Headcount</th>
+                                        <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500">Admin Email</th>
+                                        <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500 text-center">Approval</th>
+                                        <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {filtered.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={8} className="px-6 py-16 text-center text-slate-400">
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <Info className="w-8 h-8 mb-3 opacity-50" />
+                                                    <p className="text-sm font-medium">No records found</p>
+                                                    <p className="text-[10px] mt-1">Click "Add New Customer" to create your first corporate customer</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : filtered.map((corp) => (
+                                        <tr key={corp.id} className="group hover:bg-slate-50 transition-colors duration-200">
+                                            <td className="px-6 py-4">
+                                                <div className={`w-2.5 h-2.5 rounded-full ring-4 ring-opacity-20 ${corp.corporateInfoCompleted ? 'bg-emerald-500 ring-emerald-500' : 'bg-slate-300 ring-slate-300'}`}></div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <Link href={`/corporate-customers/${corp.id}?view=overview`} className="font-bold text-blue-600 hover:text-blue-800 transition-colors">
+                                                    {corp.name || "New Customer Draft"}
+                                                </Link>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-600 font-bold text-[10px] uppercase">{corp.broker || "-"}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="inline-flex items-center justify-center w-8 h-6 rounded-md bg-blue-50 text-blue-700 font-bold text-xs">{0}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="inline-flex items-center justify-center w-8 h-6 rounded-md bg-slate-100 text-slate-700 font-bold text-xs">
+                                                    {corp.tiers?.reduce((acc, t) => acc + (t.status === "Active" ? 1 : 0), 0) || 0}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-500 text-xs font-medium">{corp.contactEmail || "-"}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button className="bg-[#0a1e3b] text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase shadow-lg shadow-blue-900/10 hover:bg-blue-900 hover:scale-105 transition-all">
+                                                    Approve
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <Link href={`/corporate-customers/${corp.id}`} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                                                        <Edit2 size={14} />
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => setDeleteId(corp.id)}
+                                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {/* Pagination */}
+                            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center text-xs font-medium text-slate-500">
+                                <span>Showing 1 to {filtered.length} of {filtered.length} entries</span>
+                                <div className="flex gap-1">
+                                    <button className="px-3 py-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50">Previous</button>
+                                    <button className="px-3 py-1 rounded-md bg-blue-600 text-white font-bold">1</button>
+                                    <button className="px-3 py-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50">Next</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </main>
 
-            {/* Delete Confirmation Modal */}
+            {/* Modern Delete Confirmation Modal */}
             {deleteId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <div className="w-full max-w-md scale-100 transform rounded-xl bg-white p-6 shadow-2xl transition-all">
-                        <div className="mb-4 flex items-center justify-center">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                                <AlertTriangle className="h-6 w-6 text-red-600" />
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/60 backdrop-blur-sm animate-fade-in">
+                    <div className="w-full max-w-md scale-100 transform rounded-3xl bg-white p-8 shadow-2xl transition-all border border-slate-200">
+                        <div className="mb-6 flex items-center justify-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 border-4 border-red-50">
+                                <AlertTriangle className="h-8 w-8 text-red-500" />
                             </div>
                         </div>
-                        <div className="text-center">
-                            <h3 className="text-lg font-bold text-gray-900">Confirm Deletion</h3>
-                            <p className="mt-2 text-sm text-gray-500">
-                                Are you sure you want to delete this corporate customer? This action will permanently remove all data from both the local cache and the cloud database.
+                        <div className="text-center space-y-2">
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Confirm Deletion</h3>
+                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                Are you sure you want to delete this corporate customer? This action is irreversible and will remove all associated data.
                             </p>
                         </div>
-                        <div className="mt-6 flex gap-3">
+                        <div className="mt-8 flex gap-3">
                             <button
                                 onClick={() => setDeleteId(null)}
-                                className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                                className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
                                 disabled={isDeleting}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmDelete}
-                                className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 shadow-sm transition-colors flex items-center justify-center gap-2"
+                                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
                                 disabled={isDeleting}
                             >
                                 {isDeleting ? (
@@ -226,6 +274,13 @@ export default function CorporateListingPage() {
                     </div>
                 </div>
             )}
+            <style jsx global>{`
+                @keyframes fade-in {
+                  from { opacity: 0; }
+                  to { opacity: 1; }
+                }
+                .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+            `}</style>
         </div>
     );
 }

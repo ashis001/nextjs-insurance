@@ -145,10 +145,10 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
             {/* Header */}
-            <div className="bg-[#1e3a5f] px-4 py-2">
-                <h3 className="text-sm font-semibold text-white">Corporate Customer Info</h3>
+            <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Corporate Customer Info</h3>
             </div>
 
             {/* Main Form Area - White Background */}
@@ -269,9 +269,9 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             </div>
 
             {/* Group Contacts Section */}
-            <div>
-                <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">HR Benefits Contacts</h3>
+            <div className="mt-4">
+                <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white/90">HR Benefits Contacts</h3>
                 </div>
                 <div className="bg-white p-4 space-y-3">
                     {fields.map((field, index) => (
@@ -310,9 +310,9 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             </div>
 
             {/* Enrollment Section */}
-            <div>
-                <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">Enrollment Policies</h3>
+            <div className="mt-4">
+                <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Enrollment Policies</h3>
                 </div>
                 <div className="bg-white p-4 flex gap-8">
                     <div className="flex-1">
@@ -343,9 +343,9 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             </div>
 
             {/* Define Plan Coverage */}
-            <div>
-                <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">Define Plan Coverage Tiers for Employees?</h3>
+            <div className="mt-4">
+                <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Define Coverage Tiers</h3>
                 </div>
                 <div className="bg-white p-4">
                     <div className="flex gap-6 items-center">
@@ -364,10 +364,9 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             {/* Bottom Grid: Payment Info, Employer Name, Employees | Corporate Logo */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">
-                    {/* Payment Information */}
-                    <div>
-                        <div className="bg-[#1e3a5f] px-4 py-2">
-                            <h3 className="text-sm font-semibold text-white">Payment Information</h3>
+                    <div className="mt-4">
+                        <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Payment Information</h3>
                         </div>
                         <div className="bg-white p-4">
                             <div className="flex gap-4">
@@ -385,8 +384,8 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     {/* Show Employer Name & No. of Employees */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <div className="bg-[#1e3a5f] px-4 py-2">
-                                <h3 className="text-sm font-semibold text-white">Show Employer Name for Enrollments?</h3>
+                            <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Show Employer Name?</h3>
                             </div>
                             <div className="bg-white p-4">
                                 <div className="flex gap-6">
@@ -401,8 +400,8 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                             </div>
                         </div>
                         <div>
-                            <div className="bg-[#1e3a5f] px-4 py-2">
-                                <h3 className="text-sm font-semibold text-white">Number of Employees</h3>
+                            <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Employee Count</h3>
                             </div>
                             <div className="bg-white p-4">
                                 <input type="text" {...register("employeeCount")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="0" />
@@ -411,10 +410,9 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     </div>
                 </div>
 
-                {/* Right Side: Corporate Logo */}
-                <div>
-                    <div className="bg-[#1e3a5f] px-4 py-2">
-                        <h3 className="text-sm font-semibold text-white">Corporate Logo</h3>
+                <div className="mt-4">
+                    <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Corporate Logo</h3>
                     </div>
                     <div className="bg-white p-4 h-[calc(100%-40px)] flex items-center justify-center">
                         <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center text-center p-4 hover:bg-gray-50 cursor-pointer">
@@ -425,11 +423,11 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             </div>
 
             {/* Save Button */}
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-end pt-6">
                 <button
                     type="submit"
                     disabled={isSaving}
-                    className="flex items-center gap-2 rounded bg-[#1e3a5f] px-6 py-2 text-sm font-semibold text-white hover:bg-[#2a4a75] disabled:opacity-50"
+                    className="flex items-center gap-2 rounded-xl bg-[#0a1e3b] px-8 py-3 text-sm font-bold text-white hover:bg-blue-900 shadow-lg shadow-blue-900/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50"
                 >
                     {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                     Save & Next →

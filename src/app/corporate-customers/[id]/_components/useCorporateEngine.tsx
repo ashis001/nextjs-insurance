@@ -67,13 +67,9 @@ export function useCorporateEngine(corporateId: string) {
     const [corporate, setCorporate] = useState<Corporate>({ ...INITIAL_STATE, id: corporateId });
     const [isSaving, setIsSaving] = useState(false);
 
-    // 1. CACHE: Load from local cache immediately for speed
+    // Load from Supabase on mount
     useEffect(() => {
-        const saved = localStorage.getItem(`corp_${corporateId}`);
-        if (saved) {
-            setCorporate(JSON.parse(saved));
-        } else if (corporateId !== "new-corp") {
-            // If not in cache, try fetching from Supabase
+        if (corporateId !== "new-corp") {
             const loadFromCloud = async () => {
                 const cloudData = await fetchCorporateById(corporateId);
                 if (cloudData) setCorporate(cloudData);
@@ -81,20 +77,6 @@ export function useCorporateEngine(corporateId: string) {
             loadFromCloud();
         }
     }, [corporateId]);
-
-    // 2. CACHE: Automatically save to local cache on every single change
-    useEffect(() => {
-        if (corporate.id !== "new-corp") {
-            localStorage.setItem(`corp_${corporate.id}`, JSON.stringify(corporate));
-
-            // Maintain a local master list for the listing page (offline support)
-            const masterList = JSON.parse(localStorage.getItem('corp_master_list') || '[]');
-            if (!masterList.includes(corporate.id)) {
-                masterList.push(corporate.id);
-                localStorage.setItem('corp_master_list', JSON.stringify(masterList));
-            }
-        }
-    }, [corporate]);
 
     // -- Actions --
 
@@ -118,20 +100,19 @@ export function useCorporateEngine(corporateId: string) {
         try {
             setIsSaving(true);
 
-            // If we are reaching the final "OVERVIEW" stage, push everything to Supabase
-            if (newStage === "OVERVIEW") {
-                await upsertCorporate(corporate);
+            // Persist the current state to Supabase on every stage transition
+            if (corporateId !== "new-corp") {
+                await upsertCorporate({ ...corporate, stage: newStage });
             }
 
             setCorporate((prev) => ({ ...prev, stage: newStage }));
         } catch (error) {
             console.error("Error during stage transition:", error);
-            // Even if cloud save fails, let the user move to the next stage in the UI
             setCorporate((prev) => ({ ...prev, stage: newStage }));
         } finally {
             setIsSaving(false);
         }
-    }, [corporate]);
+    }, [corporate, corporateId]);
 
     // -- Validation & Transitions --
 
