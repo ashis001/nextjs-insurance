@@ -128,7 +128,13 @@ export function Sidebar() {
             <p className='text-xs font-black text-slate-900 truncate'>John Smith</p>
             <p className='text-[10px] text-slate-500 font-bold truncate uppercase tracking-tighter'>Administrator</p>
           </div>
-          <button className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+          <button
+            onClick={() => {
+              localStorage.clear();
+              window.location.href = "/";
+            }}
+            className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+          >
             <LogOut className="w-4 h-4" />
           </button>
         </div>

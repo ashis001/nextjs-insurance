@@ -8,6 +8,8 @@ import {
 
     Mic,
     MicOff,
+    Volume2,
+    VolumeX
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@/context/ChatContext";
@@ -33,6 +35,8 @@ export default function RightChatPanel() {
         updateWidth,
         externalMessage,
         clearExternalMessage,
+        isMuted,
+        setIsMuted,
     } = useChat();
     const [inputValue, setInputValue] = useState("");
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -42,6 +46,14 @@ export default function RightChatPanel() {
     const recognitionRef = useRef<any>(null);
     const transcriptRef = useRef("");
     const isVoiceModeRef = useRef(false); // Using ref for immediate sync in callbacks
+    const [isTyping, setIsTyping] = useState(false);
+    const [isResizing, setIsResizing] = useState(false);
+    const isResizingRef = useRef(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const isInterruptedRef = useRef(false);
+    const activeMessageTextRef = useRef<string | null>(null);
+
+
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -101,7 +113,7 @@ export default function RightChatPanel() {
     const [messages, setMessages] = useState<Message[]>([
         {
             id: "1",
-            text: "Hi, I'm **Max**. Your Assistant. Ask me anything",
+            text: "Hi, I'm **Nina**. Your Assistant. Ask me anything",
             sender: "assistant",
             timestamp: "", // Initialize empty to prevent hydration mismatch
         },
@@ -114,6 +126,7 @@ export default function RightChatPanel() {
                 recognitionRef.current?.stop();
                 setIsListening(false);
             }
+
             setIsSpeaking(true);
             await speakText(text);
         } finally {
@@ -121,9 +134,17 @@ export default function RightChatPanel() {
         }
     };
 
-    const isInterruptedRef = useRef(false);
+    // Effect to handle unmuting while a message is being typed
+    useEffect(() => {
+        if (!isMuted && activeMessageTextRef.current && isTyping && !isSpeaking) {
+            speakWithIndicator(activeMessageTextRef.current);
+        }
+    }, [isMuted, isTyping, isSpeaking]);
+
+
 
     const streamMessage = async (text: string, sender: "assistant" | "user", actions?: { label: string; value: string }[]) => {
+        isInterruptedRef.current = false;
         const id = Date.now().toString();
         const baseMsg: Message = {
             id,
@@ -136,6 +157,7 @@ export default function RightChatPanel() {
 
         const words = text.split(" ");
         let currentText = "";
+        activeMessageTextRef.current = text;
         const speechPromise = speakWithIndicator(text);
 
         for (let i = 0; i < words.length; i++) {
@@ -151,6 +173,7 @@ export default function RightChatPanel() {
         }
 
         await speechPromise;
+        activeMessageTextRef.current = null;
 
         // Auto-reactivate mic if voice mode is active and not interrupted
         if (isVoiceModeRef.current && !isInterruptedRef.current) {
@@ -176,7 +199,9 @@ export default function RightChatPanel() {
             // CASE A: Opened via Top Bar (or any direct external trigger)
             if (externalMessage) {
                 const timer = setTimeout(async () => {
-                    const isStandardGreeting = externalMessage.toLowerCase().includes("hi, i’m max") ||
+                    const isStandardGreeting = externalMessage.toLowerCase().includes("hi, i’m nina") ||
+                        externalMessage.toLowerCase().includes("hi, i'm nina") ||
+                        externalMessage.toLowerCase().includes("hi, i’m max") ||
                         externalMessage.toLowerCase().includes("hi, i'm max");
                     const isIntroQuestion = externalMessage.includes("What would you like to do today?");
 
@@ -189,7 +214,7 @@ export default function RightChatPanel() {
                     if (isIntroQuestion) {
                         const hiddenGreeting: Message = {
                             id: "0",
-                            text: "Hi, I'm **Max**. Your Assistant. Ask me anything",
+                            text: "Hi, I'm **Nina**. Your Assistant. Ask me anything",
                             sender: "assistant",
                             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                         };
@@ -201,7 +226,7 @@ export default function RightChatPanel() {
                     // 1st Visible Streamed Message: The trigger message
                     await streamMessage(externalMessage, "assistant");
 
-                    // If it was the standard "Hi I'm Max", we follow up with the Question + Tips
+                    // If it was the standard "Hi I'm Nina", we follow up with the Question + Tips
                     if (isStandardGreeting) {
                         if (!isInterruptedRef.current) {
                             await streamMessage(secondMsg, "assistant");
@@ -237,10 +262,7 @@ export default function RightChatPanel() {
             }
         }
     }, [externalMessage, isOpen, clearExternalMessage]);
-    const [isTyping, setIsTyping] = useState(false);
-    const [isResizing, setIsResizing] = useState(false);
-    const isResizingRef = useRef(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+
 
     // Fix Hydration mismatch for time
     useEffect(() => {
@@ -489,7 +511,7 @@ export default function RightChatPanel() {
                         )}>
                             <img
                                 alt='Voice Assistant'
-                                src='https://cdnstaticfiles.blob.core.windows.net/cdnstaticfiles/agent_images/577c9033ea4a4f26a23d25e0c2d857d9_female5.jpg'
+                                src='https://cdnstaticfiles.blob.core.windows.net/cdnstaticfiles/agent_images/nina.jpeg'
                                 className='w-full h-full rounded-full object-cover object-top'
                             />
                         </div>
@@ -510,7 +532,7 @@ export default function RightChatPanel() {
                     </div>
                     <div>
                         <h3 className='text-[#1e3a5f] font-bold text-sm tracking-tight'>
-                            MAX AI
+                            NINA CHAT
                         </h3>
                         {/*  🔊 STRONG SPEAKING WAVE */}
                         {/* <div className='flex items-center gap-2'>
@@ -573,7 +595,23 @@ export default function RightChatPanel() {
                 </div>
                 <div className='flex items-center gap-1'>
                     <button
-                        onClick={closeChat}
+                        onClick={() => {
+                            setIsMuted(!isMuted);
+                        }}
+                        className={clsx(
+                            'p-2 rounded-full transition-all',
+                            isMuted ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                        )}
+                        title={isMuted ? "Unmute" : "Mute"}
+                    >
+                        {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                    </button>
+                    <button
+                        onClick={() => {
+                            isInterruptedRef.current = true;
+                            stopSpeech();
+                            closeChat();
+                        }}
                         className='text-gray-400 hover:text-red-500 transition-all p-2 hover:bg-red-50 rounded-full'>
                         <X size={20} />
                     </button>
@@ -642,7 +680,7 @@ export default function RightChatPanel() {
                                     ? "text-gray-500 mr-1"
                                     : "text-gray-400 ml-1",
                             )}>
-                            {msg.sender === "assistant" ? "Max" : "You"} •{" "}
+                            {msg.sender === "assistant" ? "Nina" : "You"} •{" "}
                             {msg.timestamp}
                         </span>
                     </div>
@@ -684,7 +722,7 @@ export default function RightChatPanel() {
                     </button>
                     <input
                         type='text'
-                        placeholder={isListening ? "Listening..." : "Ask Max something..."}
+                        placeholder={isListening ? "Listening..." : "Ask Nina something..."}
 
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
