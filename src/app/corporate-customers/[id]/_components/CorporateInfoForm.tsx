@@ -6,7 +6,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Corporate } from "@/lib/types";
 import { useCorporateEngine } from "./useCorporateEngine";
-import { Loader2, UploadCloud } from "lucide-react";
+import { Loader2, UploadCloud, Send } from "lucide-react";
+import { speakText } from "@/lib/google-tts";
+import { useEffect, useState, useRef } from "react";
+import clsx from "clsx";
+import { SAMPLE_CORPORATE_1 } from "@/lib/sample-data";
+import { useChat } from "@/context/ChatContext";
 
 // Define the schema
 const corporateSchema = z.object({
@@ -81,7 +86,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
         employeeCount: corporate.employeeCount === null ? "" : corporate.employeeCount,
     }), [corporate]);
 
-    const { register, control, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
+    const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
         resolver: zodResolver(corporateSchema) as any,
         defaultValues
     });
@@ -116,6 +121,219 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
         "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming"
     ];
 
+    // --- GUIDE LOGIC ---
+    const [isEmailHighlighted, setIsEmailHighlighted] = useState(false);
+    const hasSpokenEmailRef = useRef(false);
+    const hasSpokenRoleRef = useRef(false);
+    const emailValue = watch("contacts.0.email");
+
+    const { openChat } = useChat();
+    const [activeFillingField, setActiveFillingField] = useState<string | null>(null);
+    const [isSubmittingHighlighted, setIsSubmittingHighlighted] = useState(false);
+    const [countdown, setCountdown] = useState<number | null>(null);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const [pointerPos, setPointerPos] = useState<{ top: number, left: number } | null>(null);
+
+    const VOICE_MESSAGES: Record<string, string> = {
+        "broker": "Please select the correct broker to manage your account effectively.",
+        "selectProfile": "Choosing the right insurance type is critical to ensure proper coverage for your group.",
+        "paymentPlatform": "We'll configure your preferred payment gateway for secure and seamless transactions.",
+        "name": "Let's capture the correct legal name of your corporation.",
+        "provincialOffices": "Indicating your primary office location allows us to apply regional benefit standards.",
+        "policyStartDate": "The policy start date determines exactly when your benefits and coverage will go live.",
+        "contactEmail": "A valid administrative email is vital for all future policy updates and certificates.",
+        "address.street1": "Please type your address.",
+        "address.unit": "Please include any suite or unit numbers.",
+        "address.city": "Please type your city.",
+        "address.province": "Please select your province.",
+        "address.country": "Please select your country.",
+        "contacts.0.firstName": "Please enter the first name of your primary contact.",
+        "contacts.0.lastName": "Please enter the last name.",
+        "contacts.0.phone": "Please enter a valid phone number.",
+        "waitingPeriodInitial": "Please select the waiting period for initial enrollment.",
+        "waitingPeriodNewHires": "Please specify the waiting period for new hires.",
+        "defineCoverageTiers": "Choose whether you want to define specific coverage tiers.",
+        "paymentMethod": "Please select your preferred payment method.",
+        "showEmployerName": "Would you like to display the employer name on member portals?",
+        "employeeCount": "Please enter the approximate number of employees."
+    };
+
+    useEffect(() => {
+        return () => {
+            if (timerRef.current) clearInterval(timerRef.current);
+        };
+    }, []);
+
+    useEffect(() => {
+        const guideStep = localStorage.getItem("max_guide_step");
+
+        if (guideStep === "add_customer") {
+            const runGuide = async () => {
+                // Helper for natural delay
+                const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+                // 1. Auto-fill data sequentially (Simulating user input)
+                const fillField = async (field: any, value: any) => {
+                    if (value !== undefined && value !== null) {
+                        const el = document.getElementById(field) as HTMLElement | null;
+                        if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Wait for scroll to finish
+                            await delay(600);
+                            const updatePos = () => {
+                                const rect = el.getBoundingClientRect();
+                                setPointerPos({ top: rect.top, left: rect.left });
+                            };
+                            updatePos();
+                            el.focus();
+                        }
+
+                        setActiveFillingField(field);
+
+                        // Professional Voice-Over - AWAIT completion
+                        if (VOICE_MESSAGES[field]) {
+                            await speakText(VOICE_MESSAGES[field]);
+                        } else {
+                            await delay(800);
+                        }
+
+                        // Re-sync position before action
+                        if (el) {
+                            const rect = el.getBoundingClientRect();
+                            setPointerPos({ top: rect.top, left: rect.left });
+                        }
+
+                        // If it's a dropdown or radio, simulate selection pause
+                        const isSelect = el?.tagName === 'SELECT';
+                        const isRadio = field.includes('waitingPeriod') || field.includes('defineCoverage') || field.includes('paymentMethod') || field.includes('showEmployer');
+
+                        if (isSelect) {
+                            const selectEl = el as HTMLSelectElement;
+                            const originalBackground = selectEl.style.backgroundColor;
+                            selectEl.style.backgroundColor = '#f0f9ff'; // Gentle highlight
+                            await delay(500);
+                            setValue(field, value);
+                            await delay(800);
+                            selectEl.style.backgroundColor = originalBackground;
+                        } else if (isRadio) {
+                            await delay(500);
+                            setValue(field, value);
+                            await delay(800);
+                        } else {
+                            // Realistic character-by-character typing
+                            await delay(300);
+                            const textValue = String(value);
+                            let currentText = "";
+                            for (let i = 0; i < textValue.length; i++) {
+                                currentText += textValue[i];
+                                setValue(field, currentText);
+                                await delay(Math.random() * 30 + 20);
+                            }
+                            await delay(500);
+                        }
+
+                        setActiveFillingField(null);
+                        setPointerPos(null);
+                        if (el) el.blur();
+                    }
+                };
+
+                await delay(500);
+                await fillField("broker", SAMPLE_CORPORATE_1.broker);
+                await fillField("selectProfile", SAMPLE_CORPORATE_1.selectProfile);
+                await fillField("paymentPlatform", SAMPLE_CORPORATE_1.paymentPlatform);
+
+                await delay(300);
+                await fillField("name", SAMPLE_CORPORATE_1.name || "TechFlow Solutions Inc.");
+                await fillField("provincialOffices", SAMPLE_CORPORATE_1.provincialOffices);
+
+                await delay(300);
+                if (SAMPLE_CORPORATE_1.policyStartDate) {
+                    await fillField("policyStartDate", new Date(SAMPLE_CORPORATE_1.policyStartDate).toISOString().split('T')[0]);
+                }
+                await fillField("contactEmail", SAMPLE_CORPORATE_1.contactEmail);
+
+                await delay(300);
+                if (SAMPLE_CORPORATE_1.address) {
+                    await fillField("address.street1", SAMPLE_CORPORATE_1.address.street1);
+                    if (SAMPLE_CORPORATE_1.address.unit) await fillField("address.unit", SAMPLE_CORPORATE_1.address.unit);
+
+                    await fillField("address.city", SAMPLE_CORPORATE_1.address.city);
+                    // Fill other address parts instantly to save time
+                    setValue("address.province", SAMPLE_CORPORATE_1.address.province);
+                    setValue("address.country", SAMPLE_CORPORATE_1.address.country);
+                    setValue("address.postalCode", SAMPLE_CORPORATE_1.address.postalCode);
+                }
+
+                await delay(300);
+                // HR Contact Info (Name & Phone only)
+                if (SAMPLE_CORPORATE_1.contacts && SAMPLE_CORPORATE_1.contacts.length > 0) {
+                    const contact = SAMPLE_CORPORATE_1.contacts[0];
+                    await fillField("contacts.0.firstName", contact.firstName);
+                    await fillField("contacts.0.lastName", contact.lastName);
+                    await fillField("contacts.0.phone", contact.phone);
+                }
+
+                await fillField("waitingPeriodInitial", SAMPLE_CORPORATE_1.waitingPeriodInitial ? "yes" : "no");
+                await fillField("waitingPeriodNewHires", SAMPLE_CORPORATE_1.waitingPeriodNewHires);
+                await fillField("defineCoverageTiers", SAMPLE_CORPORATE_1.defineCoverageTiers ? "yes" : "no");
+                await fillField("paymentMethod", SAMPLE_CORPORATE_1.paymentMethod);
+                await fillField("showEmployerName", SAMPLE_CORPORATE_1.showEmployerName ? "yes" : "no");
+                await fillField("employeeCount", SAMPLE_CORPORATE_1.employeeCount || 150);
+
+                // 2. Speak Feedback & Show in Chat
+                await delay(500);
+                const msg = "I’ve filled sample company details for you. Please enter the HR contact email.";
+                openChat(msg); // This displays text AND speaks it (via ChatContext logic if implemented, or we speak manually)
+                // ChatContext openChat usually sets externalMessage. RightChatPanel receives it and calls speakText. 
+                // So we DON'T need to call speakText manually if openChat does it.
+                // Let's assume openChat triggers the flow.
+
+                // 3. Highlight Email
+                setIsEmailHighlighted(true);
+            };
+
+            // Only run if fields are empty to avoid overwriting user edits
+            // But for "Use Sample Data" flow, strictly following the script is better
+            runGuide();
+
+            // Clear step prevents re-running on refresh, but we might want to keep it until flow is done
+            // For now, we rely on the logic running once effectively.
+            localStorage.removeItem("max_guide_step");
+        }
+    }, [setValue]);
+
+    useEffect(() => {
+        if (isEmailHighlighted && emailValue && emailValue.includes("@") && emailValue.includes(".")) {
+            if (!hasSpokenRoleRef.current) {
+                hasSpokenRoleRef.current = true;
+                const finishGuide = async () => {
+                    // Update Chat UI with the message instead of just speaking
+                    openChat("This HR contact will get admin access to manage employees and policies.");
+                    setValue("contacts.0.role", "HR Admin Access");
+                    setIsEmailHighlighted(false);
+
+                    // Auto-navigation sequence
+                    setIsSubmittingHighlighted(true);
+                    let count = 10;
+                    setCountdown(count);
+
+                    timerRef.current = setInterval(() => {
+                        count -= 1;
+                        if (count <= 0) {
+                            if (timerRef.current) clearInterval(timerRef.current);
+                            setCountdown(0);
+                            handleSubmit(onSubmit)();
+                        } else {
+                            setCountdown(count);
+                        }
+                    }, 1000);
+                };
+                finishGuide();
+            }
+        }
+    }, [emailValue, isEmailHighlighted, setValue, handleSubmit]);
+
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
         try {
             updateCorporateInfo({
@@ -145,10 +363,10 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
             {/* Header */}
-            <div className="bg-[#1e3a5f] px-4 py-2">
-                <h3 className="text-sm font-semibold text-white">Corporate Customer Info</h3>
+            <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Corporate Customer Info</h3>
             </div>
 
             {/* Main Form Area - White Background */}
@@ -158,7 +376,14 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 <div className="grid grid-cols-3 gap-4">
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Broker</label>
-                        <select {...register("broker")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
+                        <select
+                            id="broker"
+                            {...register("broker")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-500",
+                                activeFillingField === "broker" ? "border-blue-500 ring-4 ring-blue-500/30 bg-blue-50/50 scale-[1.05] shadow-xl z-10" : "border-gray-300 bg-gray-50"
+                            )}
+                        >
                             <option value="">Select</option>
                             <option value="Sarah Johnson-ADVISOR-1001">Sarah Johnson-ADVISOR-1001</option>
                             <option value="Emily Davis-ADVISOR-1002">Emily Davis-ADVISOR-1002</option>
@@ -169,7 +394,14 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     </div>
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Insurance Type</label>
-                        <select {...register("selectProfile")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
+                        <select
+                            id="selectProfile"
+                            {...register("selectProfile")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-500",
+                                activeFillingField === "selectProfile" ? "border-blue-500 ring-4 ring-blue-500/30 bg-blue-50/50 scale-[1.05] shadow-xl z-10" : "border-gray-300 bg-gray-50"
+                            )}
+                        >
                             <option value="">Select</option>
                             {profileOptions.map(opt => (
                                 <option key={opt} value={opt}>{opt}</option>
@@ -178,7 +410,14 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     </div>
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Payment Gateway</label>
-                        <select {...register("paymentPlatform")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
+                        <select
+                            id="paymentPlatform"
+                            {...register("paymentPlatform")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-500",
+                                activeFillingField === "paymentPlatform" ? "border-blue-500 ring-4 ring-blue-500/30 bg-blue-50/50 scale-[1.05] shadow-xl z-10" : "border-gray-300 bg-gray-50"
+                            )}
+                        >
                             <option value="AuthorizeNet">AuthorizeNet</option>
                             <option value="Stripe">Stripe</option>
                         </select>
@@ -189,12 +428,27 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Name of Corporation*</label>
-                        <input {...register("name")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="Name of Corporation" />
+                        <input
+                            id="name"
+                            {...register("name")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                activeFillingField === "name" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                            placeholder="Name of Corporation"
+                        />
                         {errors.name && <p className="text-xs text-red-500 mt-0.5">{errors.name.message}</p>}
                     </div>
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Offices in Operation*</label>
-                        <select {...register("provincialOffices")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
+                        <select
+                            id="provincialOffices"
+                            {...register("provincialOffices")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                activeFillingField === "provincialOffices" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                        >
                             <option value="">Select</option>
                             <option value="Toronto">Toronto</option>
                             <option value="Vancouver">Vancouver</option>
@@ -211,16 +465,40 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 <div className="grid grid-cols-3 gap-4">
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Policy Start Date*</label>
-                        <input type="date" {...register("policyStartDate")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" />
+                        <input
+                            id="policyStartDate"
+                            type="date"
+                            {...register("policyStartDate")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                activeFillingField === "policyStartDate" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                        />
                     </div>
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Contact Email*</label>
-                        <input type="email" {...register("contactEmail")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="Contact Email" />
+                        <input
+                            id="contactEmail"
+                            type="email"
+                            {...register("contactEmail")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                activeFillingField === "contactEmail" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                            placeholder="Contact Email"
+                        />
                     </div>
-                    {/* Note: Contact Email explanation text is in design, skipping precise text for now */}
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Street Address*</label>
-                        <input {...register("address.street1")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="Street Address" />
+                        <input
+                            id="address.street1"
+                            {...register("address.street1")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                activeFillingField === "address.street1" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                            placeholder="Street Address"
+                        />
                     </div>
                 </div>
 
@@ -228,15 +506,39 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 <div className="grid grid-cols-3 gap-4">
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Street Address Line 2</label>
-                        <input {...register("address.street2")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="Street Address Line 2" />
+                        <input
+                            id="address.street2"
+                            {...register("address.street2")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                activeFillingField === "address.street2" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                            placeholder="Street Address Line 2"
+                        />
                     </div>
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Unit/Apt/Suite #</label>
-                        <input {...register("address.unit")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="Unit/Apt/Suite #" />
+                        <input
+                            id="address.unit"
+                            {...register("address.unit")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                activeFillingField === "address.unit" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                            placeholder="Unit/Apt/Suite #"
+                        />
                     </div>
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">City*</label>
-                        <input {...register("address.city")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="City" />
+                        <input
+                            id="address.city"
+                            {...register("address.city")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                activeFillingField === "address.city" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                            placeholder="City"
+                        />
                     </div>
                 </div>
 
@@ -244,14 +546,28 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 <div className="grid grid-cols-3 gap-4">
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Country*</label>
-                        <select {...register("address.country")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
+                        <select
+                            id="address.country"
+                            {...register("address.country")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                activeFillingField === "address.country" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                        >
                             <option value="Canada">Canada</option>
                             <option value="USA">USA</option>
                         </select>
                     </div>
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Province*</label>
-                        <select {...register("address.province")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
+                        <select
+                            id="address.province"
+                            {...register("address.province")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                activeFillingField === "address.province" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                        >
                             <option value="">Select</option>
                             {selectedCountry === "Canada" ? (
                                 CANADA_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)
@@ -262,45 +578,92 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     </div>
                     <div>
                         <label className="block text-xs text-gray-600 mb-1">Postal Code*</label>
-                        <input {...register("address.postalCode")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="Postal Code" />
+                        <input
+                            id="address.postalCode"
+                            {...register("address.postalCode")}
+                            className={clsx(
+                                "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300 shadow-sm",
+                                activeFillingField === "address.postalCode" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                            )}
+                            placeholder="Postal Code"
+                        />
                     </div>
                 </div>
 
             </div>
 
             {/* Group Contacts Section */}
-            <div>
-                <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">HR Benefits Contacts</h3>
+            <div className="mt-4">
+                <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white/90">HR Benefits Contacts</h3>
                 </div>
                 <div className="bg-white p-4 space-y-3">
                     {fields.map((field, index) => (
                         <div key={field.id} className="grid grid-cols-5 gap-2">
                             <div>
                                 <label className="block text-xs text-red-500 mb-1">First Name*</label>
-                                <input {...register(`contacts.${index}.firstName`)} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="First Name" />
+                                <input
+                                    id={`contacts.${index}.firstName`}
+                                    {...register(`contacts.${index}.firstName`)}
+                                    className={clsx(
+                                        "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                        activeFillingField === `contacts.${index}.firstName` ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                                    )}
+                                    placeholder="First Name"
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs text-red-500 mb-1">Last Name*</label>
-                                <input {...register(`contacts.${index}.lastName`)} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="Last Name" />
+                                <input
+                                    id={`contacts.${index}.lastName`}
+                                    {...register(`contacts.${index}.lastName`)}
+                                    className={clsx(
+                                        "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                        activeFillingField === `contacts.${index}.lastName` ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                                    )}
+                                    placeholder="Last Name"
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs text-red-500 mb-1">Phone Number*</label>
-                                <input {...register(`contacts.${index}.phone`)} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="Phone Number" />
+                                <input
+                                    id={`contacts.${index}.phone`}
+                                    {...register(`contacts.${index}.phone`)}
+                                    className={clsx(
+                                        "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                        activeFillingField === `contacts.${index}.phone` ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                                    )}
+                                    placeholder="Phone Number"
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs text-red-500 mb-1">Email*</label>
-                                <input {...register(`contacts.${index}.email`)} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="Email" />
+                                <input
+                                    id={`contacts.${index}.email`}
+                                    {...register(`contacts.${index}.email`)}
+                                    className={clsx(
+                                        "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                        isEmailHighlighted && index === 0
+                                            ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/50 shadow-[0_0_15px_rgba(59,130,246,0.5)] scale-105"
+                                            : "border-gray-300 bg-gray-50"
+                                    )}
+                                    placeholder="Email"
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs text-red-500 mb-1">Role*</label>
-                                <select {...register(`contacts.${index}.role`)} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50">
+                                <select
+                                    id={`contacts.${index}.role`}
+                                    {...register(`contacts.${index}.role`)}
+                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50"
+                                >
                                     <option value="">Select</option>
                                     <option value="Accountant">Accountant</option>
                                     <option value="Executive">Executive</option>
                                     <option value="Plan Administrator">Plan Administrator</option>
                                     <option value="System Administrator">System Administrator</option>
                                     <option value="Wellness Champion">Wellness Champion</option>
+                                    <option value="HR Admin Access">HR Admin Access</option>
                                     <option value="Others">Others</option>
                                 </select>
                             </div>
@@ -310,14 +673,19 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             </div>
 
             {/* Enrollment Section */}
-            <div>
-                <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">Enrollment Policies</h3>
+            <div className="mt-4">
+                <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Enrollment Policies</h3>
                 </div>
                 <div className="bg-white p-4 flex gap-8">
                     <div className="flex-1">
                         <label className="block text-xs text-gray-600 mb-2 font-medium">Waiting Period for Initial Enrollment</label>
-                        <div className="flex gap-6 items-center">
+                        <div
+                            id="waitingPeriodInitial"
+                            className={clsx(
+                                "flex gap-6 items-center p-2 rounded-lg transition-all duration-300",
+                                activeFillingField === "waitingPeriodInitial" ? "ring-2 ring-blue-500/20 bg-blue-50/50 scale-[1.02]" : ""
+                            )}>
                             <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                                 <input type="radio" value="yes" {...register("waitingPeriodInitial")} className="text-blue-600 focus:ring-blue-500" /> Yes
                             </label>
@@ -330,7 +698,12 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
 
                     <div className="flex-[2]">
                         <label className="block text-xs text-gray-600 mb-2 font-medium">Waiting Period for New Hires</label>
-                        <div className="flex gap-4 items-center">
+                        <div
+                            id="waitingPeriodNewHires"
+                            className={clsx(
+                                "flex gap-4 items-center p-2 rounded-lg transition-all duration-300",
+                                activeFillingField === "waitingPeriodNewHires" ? "ring-2 ring-blue-500/20 bg-blue-50/50 scale-[1.02]" : ""
+                            )}>
                             {["None", "Three Months", "Six Months", "Custom"].map(opt => (
                                 <label key={opt} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                                     <input type="radio" value={opt} {...register("waitingPeriodNewHires")} className="text-blue-600 focus:ring-blue-500" /> {opt}
@@ -343,12 +716,17 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             </div>
 
             {/* Define Plan Coverage */}
-            <div>
-                <div className="bg-[#1e3a5f] px-4 py-2">
-                    <h3 className="text-sm font-semibold text-white">Define Plan Coverage Tiers for Employees?</h3>
+            <div className="mt-4">
+                <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Define Coverage Tiers</h3>
                 </div>
                 <div className="bg-white p-4">
-                    <div className="flex gap-6 items-center">
+                    <div
+                        id="defineCoverageTiers"
+                        className={clsx(
+                            "flex gap-6 items-center p-2 rounded-lg transition-all duration-300",
+                            activeFillingField === "defineCoverageTiers" ? "ring-2 ring-blue-500/20 bg-blue-50/50 scale-[1.02]" : ""
+                        )}>
                         <label className="flex items-center gap-2 text-sm text-gray-700">
                             <input type="radio" value="yes" {...register("defineCoverageTiers")} className="text-blue-600" /> Yes
                         </label>
@@ -364,13 +742,17 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             {/* Bottom Grid: Payment Info, Employer Name, Employees | Corporate Logo */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">
-                    {/* Payment Information */}
-                    <div>
-                        <div className="bg-[#1e3a5f] px-4 py-2">
-                            <h3 className="text-sm font-semibold text-white">Payment Information</h3>
+                    <div className="mt-4">
+                        <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                            <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Payment Information</h3>
                         </div>
                         <div className="bg-white p-4">
-                            <div className="flex gap-4">
+                            <div
+                                id="paymentMethod"
+                                className={clsx(
+                                    "flex gap-4 p-2 rounded-lg transition-all duration-300",
+                                    activeFillingField === "paymentMethod" ? "ring-2 ring-blue-500/20 bg-blue-50/50 scale-[1.02]" : ""
+                                )}>
                                 <label className="flex items-center gap-2 text-sm text-gray-700">
                                     <input type="radio" value="Credit Card" {...register("paymentMethod")} className="text-blue-600" /> Credit Card
                                 </label>
@@ -385,11 +767,16 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     {/* Show Employer Name & No. of Employees */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <div className="bg-[#1e3a5f] px-4 py-2">
-                                <h3 className="text-sm font-semibold text-white">Show Employer Name for Enrollments?</h3>
+                            <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Show Employer Name?</h3>
                             </div>
                             <div className="bg-white p-4">
-                                <div className="flex gap-6">
+                                <div
+                                    id="showEmployerName"
+                                    className={clsx(
+                                        "flex gap-6 p-2 rounded-lg transition-all duration-300",
+                                        activeFillingField === "showEmployerName" ? "ring-2 ring-blue-500/20 bg-blue-50/50 scale-[1.02]" : ""
+                                    )}>
                                     <label className="flex items-center gap-2 text-sm text-gray-700">
                                         <input type="radio" value="yes" {...register("showEmployerName")} className="text-blue-600" /> Yes
                                     </label>
@@ -401,20 +788,27 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                             </div>
                         </div>
                         <div>
-                            <div className="bg-[#1e3a5f] px-4 py-2">
-                                <h3 className="text-sm font-semibold text-white">Number of Employees</h3>
+                            <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Employee Count</h3>
                             </div>
                             <div className="bg-white p-4">
-                                <input type="text" {...register("employeeCount")} className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50" placeholder="0" />
+                                <input
+                                    type="text"
+                                    {...register("employeeCount")}
+                                    className={clsx(
+                                        "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300 shadow-sm",
+                                        activeFillingField === "employeeCount" ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50 scale-[1.02] shadow-md" : "border-gray-300 bg-gray-50"
+                                    )}
+                                    placeholder="0"
+                                />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Right Side: Corporate Logo */}
-                <div>
-                    <div className="bg-[#1e3a5f] px-4 py-2">
-                        <h3 className="text-sm font-semibold text-white">Corporate Logo</h3>
+                <div className="mt-4">
+                    <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Corporate Logo</h3>
                     </div>
                     <div className="bg-white p-4 h-[calc(100%-40px)] flex items-center justify-center">
                         <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center text-center p-4 hover:bg-gray-50 cursor-pointer">
@@ -425,16 +819,57 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             </div>
 
             {/* Save Button */}
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-end pt-6">
                 <button
                     type="submit"
                     disabled={isSaving}
-                    className="flex items-center gap-2 rounded bg-[#1e3a5f] px-6 py-2 text-sm font-semibold text-white hover:bg-[#2a4a75] disabled:opacity-50"
+                    className={clsx(
+                        "flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-bold text-white transition-all duration-300 disabled:opacity-50",
+                        isSubmittingHighlighted
+                            ? "bg-green-600 ring-4 ring-green-600/20 scale-105 shadow-[0_0_20px_rgba(22,163,74,0.4)]"
+                            : "bg-[#0a1e3b] hover:bg-blue-900 shadow-lg shadow-blue-900/20 hover:shadow-xl hover:-translate-y-0.5"
+                    )}
+                    onClick={() => {
+                        if (timerRef.current) clearInterval(timerRef.current);
+                        setCountdown(null);
+                    }}
                 >
                     {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Save & Next →
+                    {isSubmittingHighlighted && countdown !== null && countdown > 0
+                        ? `Auto-saving in ${countdown}s...`
+                        : "Save & Next →"}
                 </button>
             </div>
+            {/* Red Floating Indicator (Follows pointerPos state) */}
+            {activeFillingField && pointerPos && (
+                <div
+                    className="fixed z-[9999] pointer-events-none transition-all duration-300 ease-out"
+                    style={{
+                        left: pointerPos.left + 12,
+                        top: pointerPos.top - 20,
+                    }}
+                >
+                    <div className="relative animate-max-guide-bounce-gentle">
+                        <div className="bg-red-500 p-2 rounded-full shadow-[0_8px_20px_rgba(239,68,68,0.4)] border-2 border-white transform rotate-[105deg]">
+                            <Send className="w-4 h-4 text-white fill-white" />
+                        </div>
+                        {/* More visible pulse */}
+                        <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-40 scale-150" />
+                    </div>
+                    {/* Small pointer tail/arrow */}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -translate-y-1 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-500"></div>
+                </div>
+            )}
+
+            <style jsx global>{`
+                @keyframes max-guide-bounce-gentle {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-4px); }
+                }
+                .animate-max-guide-bounce-gentle {
+                  animation: max-guide-bounce-gentle 1.5s ease-in-out infinite;
+                }
+            `}</style>
         </form>
     );
 }

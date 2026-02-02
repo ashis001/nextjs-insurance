@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Agent from "@/components/Agent";
+import AgentProvider from "@/components/AgentProvider";
+import { ChatProvider } from "@/context/ChatContext";
+import RightChatPanel from "@/components/RightChatPanel";
+import PageWrapper from "@/components/PageWrapper";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -10,7 +14,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Max Insurance - Corporate Admin Platform",
-  description: "Enterprise-grade SaaS Admin Platform for Corporate Benefits Management",
+  description:
+    "Enterprise-grade SaaS Admin Platform for Corporate Benefits Management",
 };
 
 export default function RootLayout({
@@ -19,10 +24,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
-        {children}
-        <Agent />
+    <html lang='en'>
+      <body className="font-[Arial,sans-serif] antialiased">
+        <ChatProvider>
+          <PageWrapper>
+            {children}
+            <AgentProvider />
+          </PageWrapper>
+          <RightChatPanel />
+        </ChatProvider>
       </body>
     </html>
   );
