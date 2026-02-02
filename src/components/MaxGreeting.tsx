@@ -66,14 +66,27 @@ export default function MaxGreeting() {
                         className="w-full h-full object-cover object-top"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/0 to-transparent" />
-                    <div className="absolute bottom-6 left-6 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10 shadow-lg animate-pulse">
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                        <span className="text-white text-[10px] font-bold uppercase tracking-[0.1em]">Active Now</span>
+                    
+                    {/* Subtle Background Wave Ripples */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                        <div className="w-48 h-48 rounded-full border-2 border-blue-400/50 animate-nina-wave" />
+                        <div className="absolute w-48 h-48 rounded-full border-2 border-blue-400/30 animate-nina-wave" style={{ animationDelay: '1.5s' }} />
+                        <div className="absolute w-48 h-48 rounded-full border-2 border-blue-500/20 animate-nina-wave" style={{ animationDelay: '3s' }} />
+                    </div>
+
+                    <div className="absolute bottom-6 left-6 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/20 shadow-lg animate-nina-float">
+                        <div className="relative flex h-2 w-2">
+                            <div className="absolute inset-0 rounded-full bg-emerald-500 animate-nina-ping opacity-75" />
+                            <div className="absolute inset-[-4px] rounded-full bg-emerald-400 animate-nina-ping opacity-30" style={{ animationDelay: '0.5s' }} />
+                            <div className="absolute inset-[-8px] rounded-full bg-emerald-300 animate-nina-ping opacity-15" style={{ animationDelay: '1s' }} />
+                            <div className="relative rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+                        </div>
+                        <span className="text-white text-[10px] font-bold uppercase tracking-[0.15em] drop-shadow-sm">Active Now</span>
                     </div>
                 </div>
 
                 {/* Content Area */}
-                <div className="p-8 pb-8 flex flex-col items-center">
+                <div className="p-8 pb-8 flex flex-col items-center animate-nina-fade-in-up">
                     <div className="text-center space-y-2 mb-6">
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600/80">
                             Digital Assistant
@@ -89,7 +102,7 @@ export default function MaxGreeting() {
                             openChat("What would you like to do today? I can help you to onboard a new company, file a claim, or onboard a new policy provider.");
                             setIsVisible(false);
                         }}
-                        className="group relative w-full overflow-hidden rounded-2xl bg-[#0a1e3b] px-6 py-4 transition-all duration-300 hover:bg-blue-900 hover:shadow-xl hover:shadow-blue-900/20 active:scale-[0.98]"
+                        className="group relative w-full overflow-hidden rounded-2xl bg-[#0a1e3b] px-6 py-4 transition-all duration-300 hover:bg-blue-900 hover:shadow-xl hover:shadow-blue-900/20 active:scale-[0.98] animate-nina-pulse-gentle"
                     >
                         <div className="relative z-10 flex items-center justify-center gap-2 text-white font-bold tracking-wide">
                             <Sparkles size={18} className="text-blue-400 group-hover:animate-spin-slow" />
@@ -106,8 +119,28 @@ export default function MaxGreeting() {
                     to { opacity: 1; }
                 }
                 @keyframes nina-scale-in {
-                    from { transform: translateY(20px) scale(0.95); opacity: 0; }
+                    from { transform: translateY(30px) scale(0.9); opacity: 0; }
                     to { transform: translateY(0) scale(1); opacity: 1; }
+                }
+                @keyframes nina-ping {
+                    75%, 100% { transform: scale(2.5); opacity: 0; }
+                }
+                @keyframes nina-float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-4px); }
+                }
+                @keyframes nina-wave {
+                    0% { transform: scale(0.8); opacity: 0; }
+                    20% { opacity: 0.6; }
+                    100% { transform: scale(2.5); opacity: 0; }
+                }
+                @keyframes nina-fade-in-up {
+                    from { transform: translateY(10px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes nina-pulse-gentle {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.02); }
                 }
                 @keyframes shimmer {
                     100% { transform: translateX(100%); }
@@ -117,13 +150,29 @@ export default function MaxGreeting() {
                     to { transform: rotate(360deg); }
                 }
                 .animate-nina-fade-in {
-                    animation: nina-fade-in 0.4s ease-out forwards;
+                    animation: nina-fade-in 0.6s ease-out forwards;
                 }
                 .animate-nina-scale-in {
-                    animation: nina-scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                    animation: nina-scale-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                .animate-nina-ping {
+                    animation: nina-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+                }
+                .animate-nina-float {
+                    animation: nina-float 3s ease-in-out infinite;
+                }
+                .animate-nina-wave {
+                    animation: nina-wave 4.5s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+                }
+                .animate-nina-fade-in-up {
+                    animation: nina-fade-in-up 0.8s ease-out 0.2s forwards;
+                    opacity: 0;
+                }
+                .animate-nina-pulse-gentle {
+                    animation: nina-pulse-gentle 2s ease-in-out infinite;
                 }
                 .animate-shimmer {
-                    animation: shimmer 1.5s infinite;
+                    animation: shimmer 2s infinite;
                 }
                 .group-hover\:animate-spin-slow:hover {
                     animation: spin-slow 3s linear infinite;
