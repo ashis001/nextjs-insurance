@@ -127,7 +127,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     const hasSpokenRoleRef = useRef(false);
     const emailValue = watch("contacts.0.email");
 
-    const { openChat } = useChat();
+    const { openChat, isMuted } = useChat();
     const [activeFillingField, setActiveFillingField] = useState<string | null>(null);
     const [isSubmittingHighlighted, setIsSubmittingHighlighted] = useState(false);
     const [countdown, setCountdown] = useState<number | null>(null);
@@ -141,12 +141,13 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
         "name": "Let's capture the correct legal name of your corporation.",
         "provincialOffices": "Indicating your primary office location allows us to apply regional benefit standards.",
         "policyStartDate": "The policy start date determines exactly when your benefits and coverage will go live.",
-        "contactEmail": "A valid administrative email is vital for all future policy updates and certificates.",
+        "contactEmail": "A valid email is vital for all future policy updates and certificates.",
         "address.street1": "Please type your address.",
         "address.unit": "Please include any suite or unit numbers.",
         "address.city": "Please type your city.",
         "address.province": "Please select your province.",
         "address.country": "Please select your country.",
+        "address.postalCode": "Finally, enter your postal code to complete the address.",
         "contacts.0.firstName": "Please enter the first name of your primary contact.",
         "contacts.0.lastName": "Please enter the last name.",
         "contacts.0.phone": "Please enter a valid phone number.",
@@ -191,11 +192,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                         setActiveFillingField(field);
 
                         // Professional Voice-Over - AWAIT completion
-                        if (VOICE_MESSAGES[field]) {
-                            await speakText(VOICE_MESSAGES[field]);
-                        } else {
-                            await delay(800);
-                        }
+                        await speakText(VOICE_MESSAGES[field]);
 
                         // Re-sync position before action
                         if (el) {
@@ -259,10 +256,9 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     if (SAMPLE_CORPORATE_1.address.unit) await fillField("address.unit", SAMPLE_CORPORATE_1.address.unit);
 
                     await fillField("address.city", SAMPLE_CORPORATE_1.address.city);
-                    // Fill other address parts instantly to save time
-                    setValue("address.province", SAMPLE_CORPORATE_1.address.province);
-                    setValue("address.country", SAMPLE_CORPORATE_1.address.country);
-                    setValue("address.postalCode", SAMPLE_CORPORATE_1.address.postalCode);
+                    await fillField("address.country", SAMPLE_CORPORATE_1.address.country);
+                    await fillField("address.province", SAMPLE_CORPORATE_1.address.province);
+                    await fillField("address.postalCode", SAMPLE_CORPORATE_1.address.postalCode);
                 }
 
                 await delay(300);
@@ -849,7 +845,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                         top: pointerPos.top - 20,
                     }}
                 >
-                    <div className="relative animate-max-guide-bounce-gentle">
+                    <div className="relative animate-nina-guide-bounce-gentle">
                         <div className="bg-red-500 p-2 rounded-full shadow-[0_8px_20px_rgba(239,68,68,0.4)] border-2 border-white transform rotate-[105deg]">
                             <Send className="w-4 h-4 text-white fill-white" />
                         </div>
@@ -862,12 +858,12 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             )}
 
             <style jsx global>{`
-                @keyframes max-guide-bounce-gentle {
+                @keyframes nina-guide-bounce-gentle {
                   0%, 100% { transform: translateY(0); }
                   50% { transform: translateY(-4px); }
                 }
-                .animate-max-guide-bounce-gentle {
-                  animation: max-guide-bounce-gentle 1.5s ease-in-out infinite;
+                .animate-nina-guide-bounce-gentle {
+                  animation: nina-guide-bounce-gentle 1.5s ease-in-out infinite;
                 }
             `}</style>
         </form>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { stopSpeech } from "@/lib/google-tts";
+import { stopSpeech, setGlobalMuteState } from "@/lib/google-tts";
 
 interface ChatContextType {
     isOpen: boolean;
@@ -9,6 +9,8 @@ interface ChatContextType {
     externalMessage: string | null;
     hasGreeted: boolean;
     setHasGreeted: (val: boolean) => void;
+    isMuted: boolean;
+    setIsMuted: (val: boolean) => void;
     toggleChat: () => void;
     openChat: (message?: string) => void;
     closeChat: () => void;
@@ -23,6 +25,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const [width, setWidth] = useState(384);
     const [externalMessage, setExternalMessage] = useState<string | null>(null);
     const [hasGreeted, setHasGreetedState] = useState(false);
+    const [isMuted, setIsMutedState] = useState(false);
 
     // Load saved states from storage
     useEffect(() => {
@@ -30,7 +33,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         if (savedWidth) {
             setWidth(parseInt(savedWidth, 10));
         }
-        // Removed session storage check to always show greeting on new load
     }, []);
 
     const setHasGreeted = useCallback((val: boolean) => {
@@ -40,13 +42,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const toggleChat = useCallback(() => {
         setIsOpen((prev) => {
             const next = !prev;
-            if (!next) stopSpeech();
+            if (!next) {
+                stopSpeech();
+            } else {
+                // If we are opening, ensure it is unmuted
+                setIsMutedState(false);
+                setGlobalMuteState(false);
+            }
             return next;
         });
     }, []);
 
     const openChat = useCallback((message?: string) => {
         stopSpeech();
+        setIsMutedState(false);
+        setGlobalMuteState(false);
         if (message) setExternalMessage(message);
         setIsOpen(true);
     }, []);
@@ -54,6 +64,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const closeChat = useCallback(() => {
         stopSpeech();
         setIsOpen(false);
+        // We keep the mute state as is when closing, 
+        // but it will reset on next open as per openChat logic
     }, []);
 
     const clearExternalMessage = useCallback(() => setExternalMessage(null), []);
@@ -64,6 +76,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("chat_panel_width", clampedWidth.toString());
     }, []);
 
+    const setIsMuted = useCallback((val: boolean) => {
+        setIsMutedState(val);
+        setGlobalMuteState(val);
+    }, []);
+
     return (
         <ChatContext.Provider value={{
             isOpen,
@@ -71,6 +88,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             externalMessage,
             hasGreeted,
             setHasGreeted,
+            isMuted,
+            setIsMuted,
             toggleChat,
             openChat,
             closeChat,
