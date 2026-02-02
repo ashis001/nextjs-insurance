@@ -53,14 +53,31 @@ export default function RightChatPanel() {
     const isInterruptedRef = useRef(false);
     const activeMessageTextRef = useRef<string | null>(null);
 
-
+    // Helper to check and request microphone permissions
+    const checkMicrophonePermission = async (): Promise<boolean> => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
+            return true;
+        } catch (error: any) {
+            console.error("Microphone permission error:", error);
+            if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                alert("🎤 Microphone access denied. Please enable microphone permissions in your browser settings.");
+            } else if (error.name === 'NotFoundError') {
+                alert("🎤 No microphone found. Please connect a microphone.");
+            } else {
+                alert("🎤 Could not access microphone. Please check your browser settings.");
+            }
+            return false;
+        }
+    };
 
     useEffect(() => {
         if (typeof window !== "undefined") {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
             if (SpeechRecognition) {
                 recognitionRef.current = new SpeechRecognition();
-                recognitionRef.current.continuous = false; // Stop after one phrase
+                recognitionRef.current.continuous = false;
                 recognitionRef.current.interimResults = true;
 
                 recognitionRef.current.onresult = (event: any) => {
@@ -82,7 +99,29 @@ export default function RightChatPanel() {
                 };
 
                 recognitionRef.current.onerror = (event: any) => {
-                    console.error("Speech recognition error", event.error);
+                    console.error("Speech recognition error:", event.error);
+
+                    // Provide user feedback based on error type
+                    switch (event.error) {
+                        case 'not-allowed':
+                        case 'service-not-allowed':
+                            alert("🎤 Microphone access denied. Please enable permissions.");
+                            break;
+                        case 'no-speech':
+                            // Silently handle no speech, just stop listening
+                            console.log("No speech detected.");
+                            break;
+                        case 'audio-capture':
+                            alert("🎤 Microphone not available. Please check your device.");
+                            break;
+                        case 'network':
+                            alert("🌐 Network error. Please check your connection.");
+                            break;
+                        default:
+                            // For other errors, we just stop
+                            console.log("Recognition stopped due to error:", event.error);
+                    }
+
                     setIsListening(false);
                     setIsVoiceMode(false);
                     isVoiceModeRef.current = false;
@@ -91,7 +130,7 @@ export default function RightChatPanel() {
         }
     }, []);
 
-    const toggleListening = () => {
+    const toggleListening = async () => {
         if (isListening || isVoiceMode) {
             recognitionRef.current?.stop();
             setIsListening(false);
@@ -99,13 +138,39 @@ export default function RightChatPanel() {
             isVoiceModeRef.current = false;
             stopSpeech();
         } else {
+            // Check permission first
+            const hasPermission = await checkMicrophonePermission();
+            if (!hasPermission) return;
+
             try {
-                recognitionRef.current?.start();
-                setIsListening(true);
-                setIsVoiceMode(true);
-                isVoiceModeRef.current = true;
+                // Ensure we're not already running by stopping first
+                try {
+                    recognitionRef.current?.stop();
+                } catch (e) {
+                    // Ignore stop errors
+                }
+
+                // Small delay to ensure cleanup
+                setTimeout(() => {
+                    try {
+                        recognitionRef.current?.start();
+                        setIsListening(true);
+                        setIsVoiceMode(true);
+                        isVoiceModeRef.current = true;
+                    } catch (err: any) {
+                        console.error("Failed to start speech recognition:", err);
+                        if (!err.message?.includes('already started')) {
+                            alert("Failed to start voice input. Please try again.");
+                        } else {
+                            // If already started, just update UI
+                            setIsListening(true);
+                            setIsVoiceMode(true);
+                            isVoiceModeRef.current = true;
+                        }
+                    }
+                }, 100);
             } catch (err) {
-                console.error("Failed to start speech recognition:", err);
+                console.error("Setup failed:", err);
             }
         }
     };
@@ -176,15 +241,33 @@ export default function RightChatPanel() {
         activeMessageTextRef.current = null;
 
         // Auto-reactivate mic if voice mode is active and not interrupted
-        if (isVoiceModeRef.current && !isInterruptedRef.current) {
+        if (isVoiceModeRef.current && !isInterruptedRef.current && !isMuted) {
             setTimeout(() => {
                 try {
+                    // Prevent multiple starts
+                    if (isListening) return;
+
                     recognitionRef.current?.start();
                     setIsListening(true);
-                } catch (err) {
+                } catch (err: any) {
                     console.error("Auto-mic start failed:", err);
+                    // Only retry if it's not a permission issue and was previously active
+                    if (isVoiceModeRef.current && !err.message?.includes('not-allowed')) {
+                        setTimeout(() => {
+                            try {
+                                if (!isListening) {
+                                    recognitionRef.current?.start();
+                                    setIsListening(true);
+                                }
+                            } catch (e) {
+                                console.log("Retry also failed, voice mode disabled");
+                                setIsVoiceMode(false);
+                                isVoiceModeRef.current = false;
+                            }
+                        }, 1000);
+                    }
                 }
-            }, 300);
+            }, 600); // Increased delay to allow audio to fully release device
         }
     };
 
@@ -328,7 +411,11 @@ export default function RightChatPanel() {
     }, [isResizing, handleMouseMove, stopResizing]);
     const handleSend = async (overrideValue?: string) => {
         // Stop current listening for processing
-        recognitionRef.current?.stop();
+        try {
+            recognitionRef.current?.stop();
+        } catch (e) {
+            // Ignore stop errors
+        }
         setIsListening(false);
 
         stopSpeech();
@@ -381,7 +468,11 @@ export default function RightChatPanel() {
             let responseText = "";
 
             // --- KNOWLEDGE BASE LOGIC (Analyzing Project Workflows) ---
-            if (query.includes("onboard") || query.includes("onboarding")) {
+            const isOnboardingQuery =
+                query.includes("onboard") ||
+                ((query.includes("add") || query.includes("create") || query.includes("how to")) && (query.includes("customer") || query.includes("corporate")));
+
+            if (isOnboardingQuery) {
                 if (isInterruptedRef.current) return;
                 setIsTyping(false);
                 const introText = "Got it. You want to know how to create a new customer or organization.";
@@ -532,7 +623,7 @@ export default function RightChatPanel() {
                     </div>
                     <div>
                         <h3 className='text-[#1e3a5f] font-bold text-sm tracking-tight'>
-                            NINA CHAT
+                            NINA
                         </h3>
                         {/*  🔊 STRONG SPEAKING WAVE */}
                         {/* <div className='flex items-center gap-2'>
@@ -619,27 +710,27 @@ export default function RightChatPanel() {
             </div>
 
             {/* Chat Messages Area */}
-            <div className='flex-1 overflow-y-auto p-5 pb-10 space-y-6 bg-[#f8fafc]'>
+            <div className='flex-1 overflow-y-auto p-4 pb-6 space-y-2.5 bg-[#fcfdfe]'>
                 {messages.map((msg) => (
                     <div
                         key={msg.id}
                         className={clsx(
-                            "flex flex-col gap-1.5",
+                            "flex flex-col gap-0.5",
                             msg.sender === "user"
                                 ? "items-end ml-auto max-w-[85%]"
                                 : "max-w-[85%]",
                         )}>
                         <div
                             className={clsx(
-                                "p-4 rounded-2xl shadow-sm text-[14px] leading-relaxed border whitespace-pre-wrap",
+                                "py-2 px-3.5 rounded-xl shadow-sm text-[14.5px] leading-snug border whitespace-pre-wrap font-medium",
                                 msg.sender === "user"
                                     ? "bg-[#1e3a5f] text-white border-[#1e3a5f]/10 rounded-tr-none shadow-lg"
-                                    : "bg-white text-gray-700 border-gray-200 rounded-tl-none shadow-[0_2px_4px_rgba(0,0,0,0.05)]",
+                                    : "bg-white text-slate-700 border-slate-200 rounded-tl-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
                             )}>
                             {msg.text
                                 .split("**")
                                 .map((part, i) =>
-                                    i % 2 === 1 ? <strong key={i}>{part}</strong> : part,
+                                    i % 2 === 1 ? <strong key={i} className="font-extrabold text-blue-600">{part}</strong> : part,
                                 )}
 
                             {/* Action Buttons */}
@@ -663,9 +754,9 @@ export default function RightChatPanel() {
                                                     handleSend(action.label);
                                                 }
                                             }}
-                                            className='w-full py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-[#1e3a5f] hover:bg-blue-50 hover:border-blue-200 transition-all text-left flex items-center justify-between group'>
+                                            className='w-full py-2.5 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[12.5px] font-bold text-[#1e3a5f] hover:bg-blue-50 hover:border-blue-300 transition-all text-left flex items-center justify-between group shadow-sm'>
                                             {action.label}
-                                            <div className='w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-blue-400 group-hover:text-blue-600 transition-colors'>
+                                            <div className='w-5.5 h-5.5 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm'>
                                                 →
                                             </div>
                                         </button>
@@ -673,16 +764,7 @@ export default function RightChatPanel() {
                                 </div>
                             )}
                         </div>
-                        <span
-                            className={clsx(
-                                "text-[10px] font-bold uppercase tracking-wider",
-                                msg.sender === "user"
-                                    ? "text-gray-500 mr-1"
-                                    : "text-gray-400 ml-1",
-                            )}>
-                            {msg.sender === "assistant" ? "Nina" : "You"} •{" "}
-                            {msg.timestamp}
-                        </span>
+                        {/* Metadata removed as per user request */}
                     </div>
                 ))}
 
@@ -740,13 +822,6 @@ export default function RightChatPanel() {
                         <Send size={18} />
                     </button>
                 </form>
-                <div className='flex items-center justify-center gap-3 mt-4'>
-                    <div className='h-[1px] flex-1 bg-gray-200'></div>
-                    <p className='text-[9px] text-gray-400 font-black uppercase tracking-[2px]'>
-                        Security Verified Assistant
-                    </p>
-                    <div className='h-[1px] flex-1 bg-gray-200'></div>
-                </div>
             </div>
         </div>
     );

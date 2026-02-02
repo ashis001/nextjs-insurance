@@ -18,6 +18,20 @@ export interface TTSOptions {
 }
 
 /**
+ * Utility to strip markdown characters before sending to TTS
+ */
+function stripMarkdown(text: string): string {
+    return text
+        .replace(/\*\*/g, '')    // Remove bold
+        .replace(/\*/g, '')     // Remove italic/bullets
+        .replace(/__/g, '')     // Remove bold underscores
+        .replace(/_/g, '')      // Remove italic underscores
+        .replace(/#/g, '')      // Remove headers
+        .replace(/\[(.*?)\]\(.*?\)/g, '$1') // Remove link syntax but keep label
+        .trim();
+}
+
+/**
  * Synthesizes text to speech and returns the audio content as a base64 string.
  * @param text The text to synthesize
  * @param options Voice options
@@ -27,8 +41,9 @@ export async function synthesizeSpeech(text: string, options: TTSOptions = {}): 
         throw new Error('Google TTS API Key is not configured in .env.local');
     }
 
+    const cleanedText = stripMarkdown(text);
     const payload = {
-        input: { text },
+        input: { text: cleanedText },
         voice: {
             languageCode: options.languageCode || 'en-US',
             name: options.name || 'en-US-Standard-C',

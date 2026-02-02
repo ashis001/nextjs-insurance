@@ -123,9 +123,11 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
 
     // --- GUIDE LOGIC ---
     const [isEmailHighlighted, setIsEmailHighlighted] = useState(false);
+    const [isRoleHighlighted, setIsRoleHighlighted] = useState(false);
     const hasSpokenEmailRef = useRef(false);
     const hasSpokenRoleRef = useRef(false);
     const emailValue = watch("contacts.0.email");
+    const roleValue = watch("contacts.0.role");
 
     const { openChat, isMuted } = useChat();
     const [activeFillingField, setActiveFillingField] = useState<string | null>(null);
@@ -133,6 +135,50 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     const [countdown, setCountdown] = useState<number | null>(null);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const [pointerPos, setPointerPos] = useState<{ top: number, left: number } | null>(null);
+    const formRef = useRef<HTMLFormElement>(null);
+
+    // Continuous Pointer Re-sync Effect
+    useEffect(() => {
+        if (!activeFillingField) {
+            setPointerPos(null);
+            return;
+        }
+
+        const updatePosition = () => {
+            const el = document.getElementById(activeFillingField);
+            const formEl = formRef.current;
+            if (el && formEl) {
+                const rect = el.getBoundingClientRect();
+                const formRect = formEl.getBoundingClientRect();
+                // Position pointer exactly above the center of the element, relative to form container
+                // This fix bypasses the transform-containing-block issue caused by parents using CSS animations
+                setPointerPos({
+                    top: rect.top - formRect.top,
+                    left: rect.left - formRect.left + rect.width / 2
+                });
+            }
+        };
+
+        // Update immediately
+        updatePosition();
+
+        // Then on every frame for perfect sync during scrolls/animations
+        let rafId: number;
+        const tick = () => {
+            updatePosition();
+            rafId = requestAnimationFrame(tick);
+        };
+        rafId = requestAnimationFrame(tick);
+
+        window.addEventListener('resize', updatePosition);
+        window.addEventListener('scroll', updatePosition, true);
+
+        return () => {
+            cancelAnimationFrame(rafId);
+            window.removeEventListener('resize', updatePosition);
+            window.removeEventListener('scroll', updatePosition, true);
+        };
+    }, [activeFillingField]);
 
     const VOICE_MESSAGES: Record<string, string> = {
         "broker": "Please select the correct broker to manage your account effectively.",
@@ -174,31 +220,23 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
                 // 1. Auto-fill data sequentially (Simulating user input)
-                const fillField = async (field: any, value: any) => {
+                const fillField = async (field: any, value: any, isLast: boolean = false) => {
                     if (value !== undefined && value !== null) {
                         const el = document.getElementById(field) as HTMLElement | null;
                         if (el) {
                             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            // Wait for scroll to finish
-                            await delay(600);
-                            const updatePos = () => {
-                                const rect = el.getBoundingClientRect();
-                                setPointerPos({ top: rect.top, left: rect.left });
-                            };
-                            updatePos();
-                            el.focus();
+                            // Wait for scroll to stabilize
+                            await delay(400);
                         }
 
                         setActiveFillingField(field);
+                        if (el) el.focus();
 
                         // Professional Voice-Over - AWAIT completion
                         await speakText(VOICE_MESSAGES[field]);
 
-                        // Re-sync position before action
-                        if (el) {
-                            const rect = el.getBoundingClientRect();
-                            setPointerPos({ top: rect.top, left: rect.left });
-                        }
+                        // Wait a moment for visual focus to sink in before typing/selecting
+                        await delay(200);
 
                         // If it's a dropdown or radio, simulate selection pause
                         const isSelect = el?.tagName === 'SELECT';
@@ -206,32 +244,31 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
 
                         if (isSelect) {
                             const selectEl = el as HTMLSelectElement;
-                            const originalBackground = selectEl.style.backgroundColor;
-                            selectEl.style.backgroundColor = '#f0f9ff'; // Gentle highlight
-                            await delay(500);
+                            await delay(400);
                             setValue(field, value);
-                            await delay(800);
-                            selectEl.style.backgroundColor = originalBackground;
+                            await delay(600);
                         } else if (isRadio) {
-                            await delay(500);
+                            await delay(400);
                             setValue(field, value);
-                            await delay(800);
+                            await delay(600);
                         } else {
                             // Realistic character-by-character typing
-                            await delay(300);
+                            await delay(200);
                             const textValue = String(value);
                             let currentText = "";
                             for (let i = 0; i < textValue.length; i++) {
                                 currentText += textValue[i];
                                 setValue(field, currentText);
-                                await delay(Math.random() * 30 + 20);
+                                await delay(Math.random() * 25 + 15);
                             }
-                            await delay(500);
+                            await delay(400);
                         }
 
-                        setActiveFillingField(null);
-                        setPointerPos(null);
-                        if (el) el.blur();
+                        // Clear only if it's the last field, otherwise keep for smooth transition
+                        if (isLast) {
+                            setActiveFillingField(null);
+                            if (el) el.blur();
+                        }
                     }
                 };
 
@@ -275,18 +312,18 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 await fillField("defineCoverageTiers", SAMPLE_CORPORATE_1.defineCoverageTiers ? "yes" : "no");
                 await fillField("paymentMethod", SAMPLE_CORPORATE_1.paymentMethod);
                 await fillField("showEmployerName", SAMPLE_CORPORATE_1.showEmployerName ? "yes" : "no");
-                await fillField("employeeCount", SAMPLE_CORPORATE_1.employeeCount || 150);
+                await fillField("employeeCount", SAMPLE_CORPORATE_1.employeeCount || 150, true);
 
                 // 2. Speak Feedback & Show in Chat
                 await delay(500);
-                const msg = "I’ve filled sample company details for you. Please enter the HR contact email.";
-                openChat(msg); // This displays text AND speaks it (via ChatContext logic if implemented, or we speak manually)
-                // ChatContext openChat usually sets externalMessage. RightChatPanel receives it and calls speakText. 
-                // So we DON'T need to call speakText manually if openChat does it.
-                // Let's assume openChat triggers the flow.
-
+                const msg = "I’ve filled the sample company details for you. Please enter the HR contact email below to proceed.";
+                openChat(msg);
+                
                 // 3. Highlight Email
                 setIsEmailHighlighted(true);
+                setActiveFillingField("contacts.0.email");
+                const emailEl = document.getElementById("contacts.0.email");
+                if (emailEl) emailEl.focus();
             };
 
             // Only run if fields are empty to avoid overwriting user edits
@@ -300,35 +337,51 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     }, [setValue]);
 
     useEffect(() => {
+        // Step 1: When email becomes valid, move to Role
         if (isEmailHighlighted && emailValue && emailValue.includes("@") && emailValue.includes(".")) {
             if (!hasSpokenRoleRef.current) {
                 hasSpokenRoleRef.current = true;
-                const finishGuide = async () => {
-                    // Update Chat UI with the message instead of just speaking
-                    openChat("This HR contact will get admin access to manage employees and policies.");
-                    setValue("contacts.0.role", "HR Admin Access");
+                const moveToRole = async () => {
                     setIsEmailHighlighted(false);
-
-                    // Auto-navigation sequence
-                    setIsSubmittingHighlighted(true);
-                    let count = 10;
-                    setCountdown(count);
-
-                    timerRef.current = setInterval(() => {
-                        count -= 1;
-                        if (count <= 0) {
-                            if (timerRef.current) clearInterval(timerRef.current);
-                            setCountdown(0);
-                            handleSubmit(onSubmit)();
-                        } else {
-                            setCountdown(count);
-                        }
-                    }, 1000);
+                    await speakText("Great! Now, please select a role for this contact to define their access level.");
+                    setIsRoleHighlighted(true);
+                    setActiveFillingField("contacts.0.role");
+                    
+                    const el = document.getElementById("contacts.0.role");
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 };
-                finishGuide();
+                moveToRole();
             }
         }
-    }, [emailValue, isEmailHighlighted, setValue, handleSubmit]);
+
+        // Step 2: When role is selected, finish guide and prepare for save
+        if (isRoleHighlighted && roleValue && roleValue !== "Select" && roleValue !== "") {
+            const finishGuide = async () => {
+                setIsRoleHighlighted(false);
+                setActiveFillingField(null);
+                
+                openChat("Excellent. This HR contact is now configured. I'm ready to save these details.");
+                
+                // Auto-navigation sequence
+                setIsSubmittingHighlighted(true);
+                let count = 5; // Shorter countdown for better UX
+                setCountdown(count);
+
+                timerRef.current = setInterval(() => {
+                    count -= 1;
+                    if (count <= 0) {
+                        if (timerRef.current) clearInterval(timerRef.current);
+                        setCountdown(0);
+                        handleSubmit(onSubmit)();
+                    } else {
+                        setCountdown(count);
+                    }
+                }, 1000);
+            };
+            finishGuide();
+            setIsRoleHighlighted(false); // Prevent re-trigger
+        }
+    }, [emailValue, roleValue, isEmailHighlighted, isRoleHighlighted, setValue, handleSubmit]);
 
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
         try {
@@ -359,7 +412,19 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
+        <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-2 relative">
+            {/* Guidance Progress Bar */}
+            {(isEmailHighlighted || isRoleHighlighted || isSubmittingHighlighted) && (
+                <div className="absolute top-0 left-0 w-full h-1 bg-gray-100 rounded-t-xl overflow-hidden z-[100]">
+                    <div 
+                        className="h-full bg-blue-500 transition-all duration-1000 ease-out"
+                        style={{ 
+                            width: isSubmittingHighlighted ? "100%" : isRoleHighlighted ? "75%" : "50%" 
+                        }}
+                    />
+                </div>
+            )}
+
             {/* Header */}
             <div className="bg-[#0a1e3b] px-4 py-2.5 rounded-t-xl">
                 <h3 className="text-xs font-black uppercase tracking-widest text-white/90">Corporate Customer Info</h3>
@@ -651,7 +716,12 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                                 <select
                                     id={`contacts.${index}.role`}
                                     {...register(`contacts.${index}.role`)}
-                                    className="w-full rounded border border-gray-300 px-3 py-1.5 text-sm bg-gray-50"
+                                    className={clsx(
+                                        "w-full rounded border px-3 py-1.5 text-sm transition-all duration-300",
+                                        isRoleHighlighted && index === 0
+                                            ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/50 shadow-[0_0_15px_rgba(59,130,246,0.5)] scale-105"
+                                            : "border-gray-300 bg-gray-50"
+                                    )}
                                 >
                                     <option value="">Select</option>
                                     <option value="Accountant">Accountant</option>
@@ -839,21 +909,20 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             {/* Red Floating Indicator (Follows pointerPos state) */}
             {activeFillingField && pointerPos && (
                 <div
-                    className="fixed z-[9999] pointer-events-none transition-all duration-300 ease-out"
+                    className="absolute z-[10000] pointer-events-none transition-all duration-500 ease-in-out"
                     style={{
-                        left: pointerPos.left + 12,
-                        top: pointerPos.top - 20,
+                        left: pointerPos.left,
+                        top: pointerPos.top - 15, // Sit exactly 15px above the element top
+                        transform: 'translate(-50%, -100%)'
                     }}
                 >
                     <div className="relative animate-nina-guide-bounce-gentle">
-                        <div className="bg-red-500 p-2 rounded-full shadow-[0_8px_20px_rgba(239,68,68,0.4)] border-2 border-white transform rotate-[105deg]">
-                            <Send className="w-4 h-4 text-white fill-white" />
+                        <div className="bg-red-500 p-2.5 rounded-full shadow-[0_15px_40px_rgba(239,68,68,0.6)] border-2 border-white transform rotate-[105deg]">
+                            <Send className="w-5 h-5 text-white fill-white" />
                         </div>
-                        {/* More visible pulse */}
-                        <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-40 scale-150" />
+                        {/* More intense pulse for visibility */}
+                        <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-50 scale-[1.7]" />
                     </div>
-                    {/* Small pointer tail/arrow */}
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -translate-y-1 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-500"></div>
                 </div>
             )}
 
