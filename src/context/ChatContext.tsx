@@ -30,20 +30,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         if (savedWidth) {
             setWidth(parseInt(savedWidth, 10));
         }
-
-        const greeted = sessionStorage.getItem("max_greeted_session");
-        if (greeted === "true") {
-            setHasGreetedState(true);
-        }
+        // Removed session storage check to always show greeting on new load
     }, []);
 
     const setHasGreeted = useCallback((val: boolean) => {
         setHasGreetedState(val);
-        if (val) {
-            sessionStorage.setItem("max_greeted_session", "true");
-        } else {
-            sessionStorage.removeItem("max_greeted_session");
-        }
     }, []);
 
     const toggleChat = useCallback(() => {

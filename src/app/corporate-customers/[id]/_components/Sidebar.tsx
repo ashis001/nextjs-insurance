@@ -32,8 +32,8 @@ const NAV_ITEMS = [
 ];
 
 const SECONDARY_NAV = [
-  { label: "Settings", icon: Settings },
-  { label: "Help Center", icon: HelpCircle },
+  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Help Center", href: "/help-center", icon: HelpCircle },
 ];
 
 export function Sidebar() {
@@ -50,7 +50,6 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className='text-sm font-black text-slate-900 uppercase tracking-tighter leading-none'>Max Insurance</h1>
-            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest mt-1">Portal v2.0</p>
           </div>
         </div>
       </div>
@@ -71,7 +70,7 @@ export function Sidebar() {
                 className={clsx(
                   "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-300 relative overflow-hidden",
                   isActive
-                    ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/10"
+                    ? "bg-[#3b5a7d] text-white shadow-lg shadow-blue-900/20"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                 )}>
                 <item.icon className={clsx("h-4 w-4 transition-transform duration-300", isActive ? "scale-110" : "group-hover:scale-110")} />
@@ -89,15 +88,27 @@ export function Sidebar() {
         {/* Secondary Nav */}
         <nav className='space-y-1.5'>
           <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Support & Config</p>
-          {SECONDARY_NAV.map((item) => (
-            <button
-              key={item.label}
-              className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all duration-300"
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </button>
-          ))}
+          {SECONDARY_NAV.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={clsx(
+                  "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-300 relative overflow-hidden",
+                  isActive
+                    ? "bg-[#3b5a7d] text-white shadow-md shadow-blue-900/20"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                )}
+              >
+                <item.icon className={clsx("h-4 w-4 transition-transform duration-300", isActive ? "scale-110" : "group-hover:scale-110")} />
+                {item.label}
+                {isActive && (
+                  <div className="absolute left-0 top-0 h-full w-1 bg-blue-400 rounded-r-full" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 

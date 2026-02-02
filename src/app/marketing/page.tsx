@@ -62,50 +62,50 @@ export default function MarketingPage() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={toggleChat}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all hover:-translate-y-0.5 font-bold text-xs">
-                            <Sparkles className="w-4 h-4" />
+                            className="flex items-center gap-2 px-5 py-2.5 bg-[#0a1e3b] text-white rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transition-all hover:-translate-y-0.5 font-black text-[11px] uppercase tracking-wider">
+                            <Sparkles className="w-4 h-4 text-blue-400" />
                             Ask Max
                         </button>
                     </div>
                 </header>
 
                 <div className="relative z-10 p-8 space-y-6 animate-fade-in">
-                    {/* Controls Bar */}
-                    <div className="flex justify-between items-center bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-slate-200 shadow-sm">
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm relative group">
-                                <Search className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
-                                <input
-                                    placeholder="Search assets..."
-                                    className="text-sm font-medium outline-none text-slate-700 placeholder:text-slate-400 w-48"
-                                />
-                            </div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm">
-                                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Category:</span>
-                                <select
-                                    value={categoryFilter}
-                                    onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="text-sm font-bold text-slate-700 bg-transparent outline-none cursor-pointer"
-                                >
-                                    <option>All Categories</option>
-                                    <option>Brochure</option>
-                                    <option>Kit</option>
-                                    <option>Social Media</option>
-                                    <option>Presentation</option>
-                                </select>
-                            </div>
-                        </div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full">{filteredMaterials.length} Assets</span>
-                    </div>
-
-                    {/* Asset Library */}
+                    {/* Asset Library with Integrated Controls */}
                     <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden">
-                        <div className="bg-[#0a1e3b] px-6 py-4 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md">
-                                    <Megaphone className="w-4 h-4 text-blue-400" />
+                        <div className="bg-[#0a1e3b] px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md">
+                                        <Megaphone className="w-4 h-4 text-blue-400" />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">Asset Library</h3>
                                 </div>
-                                <h3 className="text-sm font-bold text-white">Asset Library</h3>
+                                <span className="text-[9px] font-black text-blue-200 uppercase tracking-widest bg-white/5 px-2.5 py-1 rounded-full border border-white/5">{filteredMaterials.length} Total</span>
+                            </div>
+
+                            <div className="flex flex-col md:flex-row items-center gap-3">
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl border border-white/10 shadow-sm relative group focus-within:bg-white/20 transition-all">
+                                    <Search className="w-3.5 h-3.5 text-blue-200 group-hover:text-white transition-colors" />
+                                    <input
+                                        placeholder="Search assets..."
+                                        className="bg-transparent text-[11px] font-bold outline-none text-white placeholder:text-blue-200/50 w-32 md:w-40"
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-xl border border-white/10 shadow-sm focus-within:bg-white/20 transition-all">
+                                    <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider">Category:</span>
+                                    <select
+                                        value={categoryFilter}
+                                        onChange={(e) => setCategoryFilter(e.target.value)}
+                                        className="bg-transparent text-[11px] font-black text-white outline-none cursor-pointer appearance-none"
+                                    >
+                                        <option className="text-slate-900 font-bold">All Categories</option>
+                                        <option className="text-slate-900 font-bold">Brochure</option>
+                                        <option className="text-slate-900 font-bold">Kit</option>
+                                        <option className="text-slate-900 font-bold">Social Media</option>
+                                        <option className="text-slate-900 font-bold">Presentation</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -163,7 +163,7 @@ export default function MarketingPage() {
                         </div>
                     </div>
                 </div>
-            </main>
+            </main >
             <style jsx global>{`
                 @keyframes fade-in {
                   from { opacity: 0; }
@@ -171,6 +171,6 @@ export default function MarketingPage() {
                 }
                 .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
             `}</style>
-        </div>
+        </div >
     );
 }

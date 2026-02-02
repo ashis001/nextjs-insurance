@@ -4,10 +4,10 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
     X,
     Send,
-    Paperclip,
-    Settings,
     MessageSquare,
-    Loader2,
+
+    Mic,
+    MicOff,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@/context/ChatContext";
@@ -36,6 +36,68 @@ export default function RightChatPanel() {
     } = useChat();
     const [inputValue, setInputValue] = useState("");
     const [isSpeaking, setIsSpeaking] = useState(false);
+    const [isListening, setIsListening] = useState(false);
+    const [isVoiceMode, setIsVoiceMode] = useState(false); // Persistent voice mode
+    const [pendingContext, setPendingContext] = useState<string | null>(null); // NEW: Track conversational state
+    const recognitionRef = useRef<any>(null);
+    const transcriptRef = useRef("");
+    const isVoiceModeRef = useRef(false); // Using ref for immediate sync in callbacks
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                recognitionRef.current = new SpeechRecognition();
+                recognitionRef.current.continuous = false; // Stop after one phrase
+                recognitionRef.current.interimResults = true;
+
+                recognitionRef.current.onresult = (event: any) => {
+                    const transcript = Array.from(event.results)
+                        .map((result: any) => result[0])
+                        .map((result: any) => result.transcript)
+                        .join("");
+
+                    transcriptRef.current = transcript;
+                    setInputValue(transcript);
+                };
+
+                recognitionRef.current.onend = () => {
+                    setIsListening(false);
+                    if (transcriptRef.current.trim()) {
+                        handleSend(transcriptRef.current);
+                        transcriptRef.current = "";
+                    }
+                };
+
+                recognitionRef.current.onerror = (event: any) => {
+                    console.error("Speech recognition error", event.error);
+                    setIsListening(false);
+                    setIsVoiceMode(false);
+                    isVoiceModeRef.current = false;
+                };
+            }
+        }
+    }, []);
+
+    const toggleListening = () => {
+        if (isListening || isVoiceMode) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+            setIsVoiceMode(false);
+            isVoiceModeRef.current = false;
+            stopSpeech();
+        } else {
+            try {
+                recognitionRef.current?.start();
+                setIsListening(true);
+                setIsVoiceMode(true);
+                isVoiceModeRef.current = true;
+            } catch (err) {
+                console.error("Failed to start speech recognition:", err);
+            }
+        }
+    };
+
     const [messages, setMessages] = useState<Message[]>([
         {
             id: "1",
@@ -47,10 +109,15 @@ export default function RightChatPanel() {
 
     const speakWithIndicator = async (text: string) => {
         try {
-            setIsSpeaking(true); // NEW
+            // Stop listening before speaking to prevent state conflicts
+            if (isListening) {
+                recognitionRef.current?.stop();
+                setIsListening(false);
+            }
+            setIsSpeaking(true);
             await speakText(text);
         } finally {
-            setIsSpeaking(false); // NEW
+            setIsSpeaking(false);
         }
     };
 
@@ -84,6 +151,18 @@ export default function RightChatPanel() {
         }
 
         await speechPromise;
+
+        // Auto-reactivate mic if voice mode is active and not interrupted
+        if (isVoiceModeRef.current && !isInterruptedRef.current) {
+            setTimeout(() => {
+                try {
+                    recognitionRef.current?.start();
+                    setIsListening(true);
+                } catch (err) {
+                    console.error("Auto-mic start failed:", err);
+                }
+            }, 300);
+        }
     };
 
     // Handle Entry Logic (Popup vs Top Bar)
@@ -97,24 +176,42 @@ export default function RightChatPanel() {
             // CASE A: Opened via Top Bar (or any direct external trigger)
             if (externalMessage) {
                 const timer = setTimeout(async () => {
-                    const isGreeting = externalMessage.toLowerCase().includes("hi, i’m max") ||
+                    const isStandardGreeting = externalMessage.toLowerCase().includes("hi, i’m max") ||
                         externalMessage.toLowerCase().includes("hi, i'm max");
+                    const isIntroQuestion = externalMessage.includes("What would you like to do today?");
 
                     // ONLY clear if it's a new session/greeting from the header
-                    if (isGreeting) {
-                        setMessages([]);
+                    if (isStandardGreeting || isIntroQuestion) {
+                        setMessages([]); // Reset chat for fresh start
                     }
 
-                    // 1st Message: Standard Greeting or Guide Message
+                    // If opened via Popup (Question), insert the implied first greeting
+                    if (isIntroQuestion) {
+                        const hiddenGreeting: Message = {
+                            id: "0",
+                            text: "Hi, I'm **Max**. Your Assistant. Ask me anything",
+                            sender: "assistant",
+                            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        };
+                        setMessages([hiddenGreeting]);
+                        // Small delay to ensure order
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+
+                    // 1st Visible Streamed Message: The trigger message
                     await streamMessage(externalMessage, "assistant");
 
-                    if (isGreeting) {
-                        // 2nd Message: Professional Intro
+                    // If it was the standard "Hi I'm Max", we follow up with the Question + Tips
+                    if (isStandardGreeting) {
                         if (!isInterruptedRef.current) {
                             await streamMessage(secondMsg, "assistant");
                         }
-
-                        // 3rd Message: Instructions
+                        if (!isInterruptedRef.current) {
+                            await streamMessage(thirdMsg, "assistant");
+                        }
+                    }
+                    // If it was ALREADY the Question (from popup), we just follow up with the Tips
+                    else if (isIntroQuestion) {
                         if (!isInterruptedRef.current) {
                             await streamMessage(thirdMsg, "assistant");
                         }
@@ -208,6 +305,10 @@ export default function RightChatPanel() {
         };
     }, [isResizing, handleMouseMove, stopResizing]);
     const handleSend = async (overrideValue?: string) => {
+        // Stop current listening for processing
+        recognitionRef.current?.stop();
+        setIsListening(false);
+
         stopSpeech();
         isInterruptedRef.current = true; // Stop any ongoing stream
 
@@ -232,7 +333,28 @@ export default function RightChatPanel() {
         setTimeout(async () => {
             isInterruptedRef.current = false; // Reset to allow the new response to stream
             const corporates = await fetchAllCorporates();
-            const query = textToSend.toLowerCase();
+            const query = textToSend.toLowerCase().trim();
+
+            // --- CONTEXTUAL INTENT RESOLUTION ---
+            if (pendingContext === "onboarding_sample_prompt") {
+                const positiveResponses = ["yes", "sure", "ok", "yep", "do it", "use sample", "sample data"];
+                const negativeResponses = ["no", "never mind", "skip", "real", "real customer"];
+
+                if (positiveResponses.some(r => query.includes(r))) {
+                    setPendingContext(null);
+                    localStorage.setItem("max_guide_step", "add_customer");
+                    router.push("/corporate-customers");
+                    return;
+                } else if (negativeResponses.some(r => query.includes(r))) {
+                    setPendingContext(null);
+                    if (query.includes("real")) {
+                        await streamMessage("Alright, let's set up a real customer. Navigate to the Corporate Customers page and click 'Add New Customer'.", "assistant");
+                        return;
+                    }
+                }
+            }
+            // Clear context if user says something unrelated
+            setPendingContext(null);
 
             let responseText = "";
 
@@ -249,6 +371,7 @@ export default function RightChatPanel() {
                 setIsTyping(false);
 
                 const followUpText = "Would you like to do a sample onboarding first?";
+                setPendingContext("onboarding_sample_prompt"); // Set the context for the next turn
                 await streamMessage(followUpText, "assistant", [
                     { label: "Use Sample Data", value: "sample" },
                     { label: "Use Real Customer", value: "real" },
@@ -322,9 +445,14 @@ export default function RightChatPanel() {
                 }
             }
 
-            setIsTyping(false);
-            await streamMessage(responseText, "assistant");
-        }, 1000);
+            if (responseText) {
+                setIsTyping(false);
+                await streamMessage(responseText, "assistant");
+            } else if (!query.includes("onboard") && !query.includes("onboarding")) {
+                // Fallback if no responseText set and not handled by special blocks
+                setIsTyping(false);
+            }
+        }, 2000);
     };
 
     return (
@@ -353,13 +481,32 @@ export default function RightChatPanel() {
             {/* Header */}
             <div className='flex items-center justify-between p-4 bg-white border-b border-gray-200'>
                 <div className='flex items-center gap-3'>
-                    <div className='w-10 h-10 rounded-full overflow-hidden bg-[#1e3a5f] flex items-center justify-center text-white shadow-md'>
-                        {/* <MessageSquare size={18} /> */}
-                        <img
-                            alt='Voice Assistant'
-                            src='https://cdnstaticfiles.blob.core.windows.net/cdnstaticfiles/agent_images/577c9033ea4a4f26a23d25e0c2d857d9_female5.jpg'
-                            className='w-full h-full rounded-full object-cover object-top'
-                        />
+                    <div className='relative'>
+                        <div className={clsx(
+                            'w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white shadow-md relative z-10 transition-all duration-500',
+                            isSpeaking ? 'ring-2 ring-green-500 ring-offset-2' :
+                                isListening ? 'ring-2 ring-yellow-400 ring-offset-2' : 'bg-[#1e3a5f]'
+                        )}>
+                            <img
+                                alt='Voice Assistant'
+                                src='https://cdnstaticfiles.blob.core.windows.net/cdnstaticfiles/agent_images/577c9033ea4a4f26a23d25e0c2d857d9_female5.jpg'
+                                className='w-full h-full rounded-full object-cover object-top'
+                            />
+                        </div>
+                        {isSpeaking && (
+                            <>
+                                <div className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-30" />
+                                <div className="absolute inset-[-4px] rounded-full bg-green-400 animate-ping opacity-20" style={{ animationDelay: '0.4s' }} />
+                                <div className="absolute inset-[-8px] rounded-full border-2 border-green-300 animate-pulse opacity-10" />
+                            </>
+                        )}
+                        {isListening && (
+                            <>
+                                <div className="absolute inset-0 rounded-full bg-yellow-400 animate-ping opacity-30" />
+                                <div className="absolute inset-[-4px] rounded-full bg-yellow-300 animate-ping opacity-20" style={{ animationDelay: '0.4s' }} />
+                                <div className="absolute inset-[-8px] rounded-full border-2 border-yellow-200 animate-pulse opacity-10" />
+                            </>
+                        )}
                     </div>
                     <div>
                         <h3 className='text-[#1e3a5f] font-bold text-sm tracking-tight'>
@@ -404,18 +551,27 @@ export default function RightChatPanel() {
                         <p className='text-gray-500 text-[10px] flex items-center gap-2 font-semibold'>
                             <span className='relative flex h-2 w-2'>
                                 {isSpeaking && (
-                                    <span className='absolute inline-flex h-full w-full rounded-full bg-green-400  animate-ping' />
+                                    <>
+                                        <span className='absolute inset-[-2px] inline-flex h-full w-full rounded-full bg-green-400 animate-ping opacity-75' />
+                                        <span className='absolute inset-[-4px] inline-flex h-full w-full rounded-full bg-green-300 animate-pulse opacity-40' />
+                                    </>
                                 )}
-                                <span className='relative inline-flex rounded-full h-2 w-4 bg-green-500' />
+                                {isListening && (
+                                    <>
+                                        <span className='absolute inset-[-2px] inline-flex h-full w-full rounded-full bg-yellow-400 animate-ping opacity-75' />
+                                        <span className='absolute inset-[-4px] inline-flex h-full w-full rounded-full bg-yellow-300 animate-pulse opacity-40' />
+                                    </>
+                                )}
+                                <span className={clsx(
+                                    'relative inline-flex rounded-full h-2 w-2 transition-colors duration-300',
+                                    isListening ? 'bg-yellow-400' : 'bg-green-500'
+                                )} />
                             </span>
-                            {isSpeaking ? "Speaking..." : "Online & Ready"}
+                            {isSpeaking ? "Speaking..." : isListening ? "Listening..." : "Online"}
                         </p>
                     </div>
                 </div>
                 <div className='flex items-center gap-1'>
-                    <button className='text-gray-400 hover:text-[#1e3a5f] transition-all p-2 hover:bg-gray-100 rounded-full'>
-                        <Settings size={18} />
-                    </button>
                     <button
                         onClick={closeChat}
                         className='text-gray-400 hover:text-red-500 transition-all p-2 hover:bg-red-50 rounded-full'>
@@ -454,14 +610,16 @@ export default function RightChatPanel() {
                                     {msg.actions.map((action, idx) => (
                                         <button
                                             key={idx}
-                                            onClick={() => {
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                // Clear pending context immediately
+                                                setPendingContext(null);
+
                                                 if (action.value === "real") {
-                                                    speakText("This feature is coming soon");
+                                                    handleSend("Use Real Customer");
                                                 } else if (action.value === "sample") {
-                                                    localStorage.setItem(
-                                                        "max_guide_step",
-                                                        "add_customer",
-                                                    );
+                                                    localStorage.setItem("max_guide_step", "add_customer");
                                                     router.push("/corporate-customers");
                                                 } else {
                                                     handleSend(action.label);
@@ -491,12 +649,13 @@ export default function RightChatPanel() {
                 ))}
 
                 {isTyping && (
-                    <div className='flex flex-col gap-2 max-w-[85%]'>
-                        <div className='bg-white text-gray-500 p-4 rounded-2xl rounded-tl-none border border-gray-200 shadow-sm flex items-center gap-2'>
-                            <Loader2 size={16} className='animate-spin text-[#1e3a5f]' />
-                            <span className='text-[13px] font-medium italic'>
-                                Max is checking the data...
-                            </span>
+                    <div className='flex flex-col gap-2 max-w-[85%] animate-fade-in'>
+                        <div className='bg-white p-4 rounded-2xl rounded-tl-none border border-gray-200 shadow-sm inline-flex items-center w-fit'>
+                            <div className='flex space-x-1.5 h-3 items-center'>
+                                <div className='w-2 h-2 bg-[#1e3a5f]/60 rounded-full animate-bounce [animation-delay:-0.3s]' />
+                                <div className='w-2 h-2 bg-[#1e3a5f]/60 rounded-full animate-bounce [animation-delay:-0.15s]' />
+                                <div className='w-2 h-2 bg-[#1e3a5f]/60 rounded-full animate-bounce' />
+                            </div>
                         </div>
                     </div>
                 )}
@@ -513,12 +672,20 @@ export default function RightChatPanel() {
                     className='flex items-center gap-2 bg-gray-50 rounded-2xl border border-gray-300 p-1.5 focus-within:border-[#1e3a5f] focus-within:ring-2 focus-within:ring-[#1e3a5f]/10 transition-all'>
                     <button
                         type='button'
-                        className='text-gray-500 hover:text-[#1e3a5f] transition-all p-2.5 hover:bg-white rounded-xl shadow-sm'>
-                        <Paperclip size={20} />
+                        onClick={toggleListening}
+                        className={clsx(
+                            "transition-all p-2.5 rounded-xl shadow-sm",
+                            isVoiceMode
+                                ? "text-red-500 bg-red-50 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                                : "text-gray-500 hover:text-[#1e3a5f] hover:bg-white"
+                        )}
+                        title={isVoiceMode ? "Stop voice mode" : "Start voice mode"}>
+                        {isVoiceMode ? <MicOff size={20} /> : <Mic size={20} />}
                     </button>
                     <input
                         type='text'
-                        placeholder='Ask Max something...'
+                        placeholder={isListening ? "Listening..." : "Ask Max something..."}
+
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         className='flex-1 bg-transparent text-gray-800 text-[14px] outline-none py-2 px-1 placeholder:text-gray-400 font-medium'

@@ -15,9 +15,27 @@ import {
   ShieldCheck,
   Zap,
   Clock,
-  Sparkles
+  Sparkles,
+  PieChart as PieIcon,
+  BarChart as BarIcon,
+  LineChart as LineIcon
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  Legend
+} from "recharts";
 
 // Mock Data
 const STATS_DATA = {
@@ -25,6 +43,25 @@ const STATS_DATA = {
   "This Week": { corps: 130, members: 8600, revenue: "1.25M", claims: 450 },
   "This Month": { corps: 145, members: 9200, revenue: "1.4M", claims: 600 },
 };
+
+const CHART_DATA = [
+  { name: "Jan", revenue: 4000, claims: 2400 },
+  { name: "Feb", revenue: 3000, claims: 1398 },
+  { name: "Mar", revenue: 2000, claims: 9800 },
+  { name: "Apr", revenue: 2780, claims: 3908 },
+  { name: "May", revenue: 1890, claims: 4800 },
+  { name: "Jun", revenue: 2390, claims: 3800 },
+  { name: "Jul", revenue: 3490, claims: 4300 },
+];
+
+const PIE_DATA = [
+  { name: "Active", value: 400 },
+  { name: "Pending", value: 300 },
+  { name: "Onboarding", value: 300 },
+  { name: "Draft", value: 200 },
+];
+
+const COLORS = ["#3b82f6", "#6366f1", "#06b6d4", "#f59e0b"];
 
 const AnimatedGrid = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
@@ -71,14 +108,14 @@ export default function DashboardPage() {
           </div>
 
           <div className='flex items-center gap-6'>
-            <div className="flex items-center bg-slate-100/50 p-1 rounded-xl border border-slate-200">
+            <div className="flex items-center bg-slate-100/80 p-1 rounded-xl border border-slate-200 shadow-inner">
               {["Today", "This Week", "This Month"].map((range) => (
                 <button
                   key={range}
                   onClick={() => setTimeRange(range as any)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${timeRange === range
-                    ? "bg-white text-blue-600 shadow-sm border border-slate-200"
-                    : "text-slate-500 hover:text-slate-700"
+                  className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-300 ${timeRange === range
+                    ? "bg-white text-blue-600 shadow-md border border-slate-200 scale-105"
+                    : "text-slate-500 hover:text-slate-900"
                     }`}
                 >
                   {range}
@@ -91,15 +128,15 @@ export default function DashboardPage() {
             <div className='flex items-center gap-3'>
               <button
                 onClick={() => openChat("Hi, I’m Max. Your Assistant. Ask me anything")}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all hover:-translate-y-0.5 font-bold text-xs">
-                <Sparkles className="w-4 h-4" />
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#0a1e3b] text-white rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transition-all hover:-translate-y-0.5 font-black text-[11px] uppercase tracking-wider">
+                <Sparkles className="w-4 h-4 text-blue-400" />
                 Ask Max
               </button>
             </div>
           </div>
         </header>
 
-        <div className='relative z-10 p-8 space-y-8 animate-fade-in'>
+        <div className='relative z-10 p-6 space-y-6 animate-fade-in'>
 
           {/* Stats Grid */}
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
@@ -137,73 +174,223 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Activity Section */}
-          <div className="animate-slide-up [animation-delay:500ms] opacity-0 [animation-fill-mode:forwards]">
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden">
-              <div className='bg-[#0a1e3b] px-8 py-6 flex justify-between items-center'>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md">
-                    <Clock className="w-5 h-5 text-blue-400" />
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Growth Chart */}
+            <div className="lg:col-span-2 bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 shadow-sm p-6 flex flex-col animate-slide-up [animation-delay:500ms]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <LineIcon className="w-4 h-4 text-blue-600" />
+                    Performance Analytics
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">Monthly revenue vs claims distribution</p>
+                </div>
+                <div className="flex items-center gap-5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    <span className="text-xs font-bold text-slate-600">Revenue</span>
                   </div>
-                  <div>
-                    <h3 className='text-lg font-bold text-white'>Recent Onboarding Activity</h3>
-                    <p className="text-xs text-blue-300 font-medium tracking-wide">Monitoring 48 active applications</p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-indigo-500" />
+                    <span className="text-xs font-bold text-slate-600">Claims</span>
                   </div>
                 </div>
-                <button className='flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/10'>
-                  View Full Report
-                  <ArrowUpRight className="w-4 h-4" />
-                </button>
               </div>
+              <div className="flex-1 min-h-[220px] w-full mt-auto">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={CHART_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorClaims" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#3b82f6"
+                      strokeWidth={4}
+                      fillOpacity={1}
+                      fill="url(#colorRevenue)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="claims"
+                      stroke="#6366f1"
+                      strokeWidth={4}
+                      fillOpacity={1}
+                      fill="url(#colorClaims)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
 
-              <div className='p-2'>
-                <table className='w-full text-left'>
-                  <thead>
-                    <tr className='text-slate-400 text-[10px] font-bold uppercase tracking-widest'>
-                      <th className='px-8 py-4'>Corporation Entity</th>
-                      <th className='px-6 py-4'>Account Broker</th>
-                      <th className='px-6 py-4'>Status</th>
-                      <th className='px-6 py-4'>Approval Date</th>
-                      <th className='px-8 py-4 text-right'>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className='divide-y divide-slate-50'>
-                    {[
-                      { name: "Acme Corp Inc.", broker: "Sarah Johnson", status: "Active", date: "Oct 24, 2024", color: "emerald", icon: ShieldCheck },
-                      { name: "TechFlow Solutions", broker: "Mike Peters", status: "Pending", date: "Oct 23, 2024", color: "amber", icon: Clock },
-                      { name: "Global Logistics Ltd", broker: "Sarah Johnson", status: "Onboarding", date: "Oct 21, 2024", color: "indigo", icon: Zap },
-                      { name: "Starlight Media", broker: "James Anderson", status: "Draft", date: "Oct 19, 2024", color: "slate", icon: Activity },
-                    ].map((row, i) => (
-                      <tr key={i} className='group hover:bg-slate-50 transition-all duration-300'>
-                        <td className='px-8 py-5'>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600 group-hover:bg-white transition-colors duration-300 border border-transparent group-hover:border-slate-200">
-                              {row.name.charAt(0)}
+            {/* Status Distribution */}
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 shadow-sm p-6 flex flex-col animate-slide-up [animation-delay:600ms]">
+              <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 mb-4">
+                <PieIcon className="w-4 h-4 text-indigo-600" />
+                Case Distribution
+              </h3>
+              <div className="flex-1 min-h-[160px] w-full flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={PIE_DATA}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={70}
+                      paddingAngle={8}
+                      dataKey="value"
+                    >
+                      {PIE_DATA.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(255,255,255,0.2)" strokeWidth={2} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-3.5 mt-6">
+                {PIE_DATA.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: COLORS[i] }} />
+                      <span className="text-xs font-bold text-slate-600">{item.name}</span>
+                    </div>
+                    <span className="text-xs font-black text-slate-900">{item.value} Units</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Table Area */}
+            <div className="animate-slide-up [animation-delay:700ms]">
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden h-full">
+                <div className="p-6 pb-0 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 rounded-lg border border-blue-100">
+                      <Clock className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-[14px] font-bold text-slate-900 uppercase tracking-wider">Onboarding Activity</h3>
+                      <p className="text-xs text-slate-500 font-medium">Recent applications</p>
+                    </div>
+                  </div>
+                  <button className="px-4 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold transition-all border border-slate-200">
+                    View Full
+                  </button>
+                </div>
+
+                <div className='p-3'>
+                  <table className='w-full text-left'>
+                    <tbody className='divide-y divide-slate-50'>
+                      {[
+                        { name: "Acme Corp Inc.", status: "Active", date: "Oct 24", color: "emerald", icon: ShieldCheck },
+                        { name: "TechFlow Solutions", status: "Pending", date: "Oct 23", color: "amber", icon: Clock },
+                        { name: "Global Logistics Ltd", status: "Onboarding", date: "Oct 21", color: "indigo", icon: Zap },
+                        { name: "Starlight Media", status: "Draft", date: "Oct 19", color: "slate", icon: Activity },
+                      ].map((row, i) => (
+                        <tr key={i} className='group hover:bg-slate-50 transition-all duration-300'>
+                          <td className='px-6 py-5'>
+                            <div className="flex items-center gap-4">
+                              <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
+                                {row.name.charAt(0)}
+                              </div>
+                              <span className='text-sm font-bold text-slate-800'>{row.name}</span>
                             </div>
-                            <span className='font-bold text-slate-800 transition-colors duration-300 group-hover:text-blue-600'>{row.name}</span>
-                          </div>
-                        </td>
-                        <td className='px-6 py-5'>
-                          <span className='text-sm text-slate-500 font-medium'>{row.broker}</span>
-                        </td>
-                        <td className='px-6 py-5'>
-                          <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-${row.color}-50 text-${row.color}-600 border border-${row.color}-100`}>
-                            <row.icon className="w-3 h-3" />
-                            {row.status}
-                          </div>
-                        </td>
-                        <td className='px-6 py-5'>
-                          <span className='text-sm text-slate-400 font-medium'>{row.date}</span>
-                        </td>
-                        <td className='px-8 py-5 text-right'>
-                          <button className='text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl'>
-                            Manage Case
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </td>
+                          <td className='px-4 py-5'>
+                            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-${row.color}-50 text-${row.color}-600 border border-${row.color}-100 shadow-sm`}>
+                              {row.status}
+                            </div>
+                          </td>
+                          <td className='px-6 py-5 text-right'>
+                            <span className='text-xs text-slate-400 font-bold'>{row.date}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Growth Bar Chart */}
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 shadow-sm p-6 flex flex-col animate-slide-up [animation-delay:800ms]">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <BarIcon className="w-4 h-4 text-blue-600" />
+                  Member Growth
+                </h3>
+                <div className="px-4 py-1.5 bg-blue-50 text-blue-600 text-[11px] font-black rounded-lg border border-blue-100 uppercase tracking-wider shadow-sm">
+                  +15% Growth
+                </div>
+              </div>
+              <div className="flex-1 min-h-[220px] w-full mt-auto">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={CHART_DATA} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorBar" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0.8} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: '#f1f5f9' }}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', fontWeight: 'bold' }}
+                    />
+                    <Bar
+                      dataKey="revenue"
+                      fill="url(#colorBar)"
+                      radius={[6, 6, 0, 0]}
+                      barSize={24}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
@@ -245,31 +432,27 @@ function StatCard({ title, value, icon: Icon, color, trend, delay }: any) {
 
   return (
     <div
-      className='animate-card-entrance group bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 p-5 shadow-sm hover:shadow-2xl hover:scale-105 transition-all duration-300 relative z-0 hover:z-10'
+      className='animate-card-entrance group bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 p-6 shadow-sm hover:shadow-2xl hover:scale-105 transition-all duration-300 relative z-0 hover:z-10'
       style={{ animationDelay: delay, animationFillMode: 'forwards' }}
     >
       <div className='flex items-start justify-between'>
-        <div className={`p-3 rounded-xl ${theme.split(' border-')[0].split(' text-')[1]} border border-slate-100 group-hover:border-current opacity-80 transition-all duration-500 shadow-sm`}>
-          <Icon className='h-5 w-5' />
+        <div className={`p-3.5 rounded-xl ${theme.split(' border-')[0].split(' text-')[1]} border border-slate-100 group-hover:border-current opacity-80 transition-all duration-500 shadow-sm`}>
+          <Icon className='h-6 w-6' />
         </div>
-        <div className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-          <TrendingUp className="w-2.5 h-2.5" />
+        <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+          <TrendingUp className="w-3 h-3" />
           {trend}
         </div>
       </div>
 
-      <div className='mt-4'>
-        <p className='text-[10px] font-bold text-slate-400 uppercase tracking-widest'>
+      <div className='mt-5'>
+        <p className='text-xs font-bold text-slate-500 uppercase tracking-widest mb-1'>
           {title}
         </p>
-        <div className="flex items-baseline gap-1.5 mt-0.5">
-          <h4 className='text-2xl font-black text-slate-900 tracking-tighter group-hover:text-blue-600 transition-colors duration-300'>{value}</h4>
-          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Total</span>
+        <div className="flex items-baseline gap-2">
+          <h4 className='text-3xl font-black text-slate-900 tracking-tighter group-hover:text-blue-600 transition-colors duration-300'>{value}</h4>
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total</span>
         </div>
-      </div>
-
-      <div className="mt-4 h-1 w-full bg-slate-100 rounded-full overflow-hidden">
-        <div className={`h-full bg-gradient-to-r ${theme.split(' text-')[0]} w-2/3`} />
       </div>
     </div>
   );

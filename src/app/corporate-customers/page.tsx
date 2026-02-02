@@ -47,7 +47,7 @@ export default function CorporateListingPage() {
             const timer = setTimeout(() => {
                 setActiveGuide("add_customer");
                 openChat("Let’s start by creating the company profile.");
-                localStorage.removeItem("max_guide_step");
+                // Do NOT clear step here; allow it to persist to the form page
             }, 800);
             return () => clearTimeout(timer);
         }
@@ -102,57 +102,57 @@ export default function CorporateListingPage() {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => openChat("Hi, I’m Max. Your Assistant. Ask me anything")}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all hover:-translate-y-0.5 font-bold text-xs">
-                            <Sparkles className="w-4 h-4" />
+                            className="flex items-center gap-2 px-5 py-2.5 bg-[#0a1e3b] text-white rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transition-all hover:-translate-y-0.5 font-black text-[11px] uppercase tracking-wider">
+                            <Sparkles className="w-4 h-4 text-blue-400" />
                             Ask Max
                         </button>
                     </div>
                 </header>
 
                 <div className="relative z-10 p-8 space-y-6 animate-fade-in">
-                    {/* Controls Bar */}
-                    <div className="relative z-50 flex justify-between items-center bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-slate-200 shadow-sm">
-                        <div className="w-full flex max-w-md">
-                            <div className="relative group w-full">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Search corporations..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full rounded-xl border border-slate-300 pl-10 pr-4 py-2 text-sm focus:border-blue-500 focus:outline-none shadow-sm bg-white font-medium placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/10 transition-all"
-                                />
-                            </div>
-                        </div>
-                        <div className="relative">
-                            <Link
-                                href={`/corporate-customers/${newId}`}
-                                onClick={() => setActiveGuide(null)}
-                                className="group flex items-center gap-2 rounded-xl bg-[#0a1e3b] px-5 py-2.5 text-xs font-bold text-white hover:bg-blue-900 shadow-lg shadow-blue-900/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
-                            >
-                                <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform" />
-                                Add New Customer
-                            </Link>
-
-                            {activeGuide === "add_customer" && (
-                                <MaxGuidePointer
-                                    text="Click here to start your onboarding guide"
-                                    targetUrl={`/corporate-customers/${newId}`}
-                                />
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Main Table Card */}
+                    {/* Main Table Card with Integrated Controls */}
                     <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden">
-                        <div className="bg-[#0a1e3b] px-6 py-4 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md">
-                                    <Info className="w-4 h-4 text-blue-400" />
+                        <div className="bg-[#0a1e3b] px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md">
+                                        <Info className="w-4 h-4 text-blue-400" />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">Active Corporations</h3>
                                 </div>
-                                <h3 className="text-sm font-bold text-white">Active Corporations</h3>
+                                <span className="text-[9px] font-black text-blue-200 uppercase tracking-widest bg-white/5 px-2.5 py-1 rounded-full border border-white/5">{filtered.length} Total</span>
                             </div>
-                            <span className="text-[10px] font-bold text-blue-200 bg-blue-900/50 px-3 py-1 rounded-full border border-blue-800">{filtered.length} Total</span>
+
+                            <div className="flex flex-col md:flex-row items-center gap-4">
+                                <div className="relative group w-48 md:w-64">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-blue-200 group-focus-within:text-white transition-colors" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search corporations..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full bg-white/10 rounded-xl border border-white/10 pl-10 pr-4 py-2 text-[11px] font-bold text-white placeholder:text-blue-200/50 focus:bg-white/20 focus:outline-none transition-all"
+                                    />
+                                </div>
+
+                                <div className="relative">
+                                    <Link
+                                        href={`/corporate-customers/${newId}`}
+                                        onClick={() => setActiveGuide(null)}
+                                        className="group flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-[11px] font-black text-white hover:bg-blue-500 shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all duration-300 uppercase tracking-wider"
+                                    >
+                                        <Plus className="h-3.5 w-3.5 group-hover:rotate-90 transition-transform" />
+                                        Add New Customer
+                                    </Link>
+
+                                    {activeGuide === "add_customer" && (
+                                        <MaxGuidePointer
+                                            text="Click here to start your onboarding guide"
+                                            targetUrl={`/corporate-customers/${newId}`}
+                                        />
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
                         <div className="bg-white">
@@ -234,49 +234,51 @@ export default function CorporateListingPage() {
                         </div>
                     </div>
                 </div>
-            </main>
+            </main >
 
             {/* Modern Delete Confirmation Modal */}
-            {deleteId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/60 backdrop-blur-sm animate-fade-in">
-                    <div className="w-full max-w-md scale-100 transform rounded-3xl bg-white p-8 shadow-2xl transition-all border border-slate-200">
-                        <div className="mb-6 flex items-center justify-center">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 border-4 border-red-50">
-                                <AlertTriangle className="h-8 w-8 text-red-500" />
+            {
+                deleteId && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/60 backdrop-blur-sm animate-fade-in">
+                        <div className="w-full max-w-md scale-100 transform rounded-3xl bg-white p-8 shadow-2xl transition-all border border-slate-200">
+                            <div className="mb-6 flex items-center justify-center">
+                                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 border-4 border-red-50">
+                                    <AlertTriangle className="h-8 w-8 text-red-500" />
+                                </div>
+                            </div>
+                            <div className="text-center space-y-2">
+                                <h3 className="text-xl font-black text-slate-900 tracking-tight">Confirm Deletion</h3>
+                                <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                    Are you sure you want to delete this corporate customer? This action is irreversible and will remove all associated data.
+                                </p>
+                            </div>
+                            <div className="mt-8 flex gap-3">
+                                <button
+                                    onClick={() => setDeleteId(null)}
+                                    className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                                    disabled={isDeleting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmDelete}
+                                    className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
+                                    disabled={isDeleting}
+                                >
+                                    {isDeleting ? (
+                                        <>
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                            Deleting...
+                                        </>
+                                    ) : (
+                                        "Delete Customer"
+                                    )}
+                                </button>
                             </div>
                         </div>
-                        <div className="text-center space-y-2">
-                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Confirm Deletion</h3>
-                            <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                                Are you sure you want to delete this corporate customer? This action is irreversible and will remove all associated data.
-                            </p>
-                        </div>
-                        <div className="mt-8 flex gap-3">
-                            <button
-                                onClick={() => setDeleteId(null)}
-                                className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-                                disabled={isDeleting}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmDelete}
-                                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 shadow-lg shadow-red-600/20 transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
-                                disabled={isDeleting}
-                            >
-                                {isDeleting ? (
-                                    <>
-                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                        Deleting...
-                                    </>
-                                ) : (
-                                    "Delete Customer"
-                                )}
-                            </button>
-                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
             <style jsx global>{`
                 @keyframes fade-in {
                   from { opacity: 0; }
@@ -284,6 +286,6 @@ export default function CorporateListingPage() {
                 }
                 .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
             `}</style>
-        </div>
+        </div >
     );
 }

@@ -67,8 +67,8 @@ export default function CorporatePage({ params }: { params: { id: string } }) {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={toggleChat}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all hover:-translate-y-0.5 font-bold text-xs">
-                            <Sparkles className="w-4 h-4" />
+                            className="flex items-center gap-2 px-5 py-2.5 bg-[#0a1e3b] text-white rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transition-all hover:-translate-y-0.5 font-black text-[11px] uppercase tracking-wider">
+                            <Sparkles className="w-4 h-4 text-blue-400" />
                             Ask Max
                         </button>
                     </div>

@@ -103,8 +103,8 @@ export default function ClaimsPage() {
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={toggleChat}
-                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all hover:-translate-y-0.5 font-bold text-xs">
-                                <Sparkles className="w-4 h-4" />
+                                className="flex items-center gap-2 px-5 py-2.5 bg-[#0a1e3b] text-white rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transition-all hover:-translate-y-0.5 font-black text-[11px] uppercase tracking-wider">
+                                <Sparkles className="w-4 h-4 text-blue-400" />
                                 Ask Max
                             </button>
                         </div>
@@ -126,7 +126,6 @@ export default function ClaimsPage() {
                                         onClick={() => { setSelectedType(type.id); setStep(2); }}
                                         className="group bg-white/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer relative overflow-hidden"
                                     >
-                                        <div className={`absolute top-0 left-0 w-full h-1 bg-${type.color}-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500`} />
 
                                         <div className={`w-14 h-14 rounded-2xl bg-${type.color}-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500`}>
                                             <type.icon className={`w-7 h-7 text-${type.color}-600`} />

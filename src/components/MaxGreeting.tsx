@@ -25,7 +25,7 @@ export default function MaxGreeting() {
             if (!isOpen && !hasGreeted) {
                 setIsVisible(true);
                 setHasGreeted(true);
-                sessionStorage.setItem("max_greeted_session", "true");
+                // Removed session storage setting
 
                 // If the user has already interacted, speak immediately
                 if (navigator.userActivation?.isActive) {

@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
+    --background: #ffffff;
+    --foreground: #0f172a;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  overflow-x: hidden;
+    color: var(--foreground);
+    background: var(--background);
+    overflow-x: hidden;
 }
 
 /* @keyframes wave {
@@ -27,14 +27,14 @@ body {
 
 @keyframes microWave {
 
-  0%,
-  100% {
-    transform: scaleY(0.5);
-    opacity: 0.7;
-  }
+    0%,
+    100% {
+        transform: scaleY(0.5);
+        opacity: 0.7;
+    }
 
-  50% {
-    transform: scaleY(1);
-    opacity: 1;
-  }
+    50% {
+        transform: scaleY(1);
+        opacity: 1;
+    }
 }
