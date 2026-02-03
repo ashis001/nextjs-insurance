@@ -67,6 +67,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                id={`nav-item-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                 className={clsx(
                   "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold transition-all duration-300 relative overflow-hidden",
                   isActive

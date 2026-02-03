@@ -202,6 +202,8 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
         "contacts.0.firstName": "Please enter the first name of your primary contact.",
         "contacts.0.lastName": "Please enter the last name.",
         "contacts.0.phone": "Please enter a valid phone number.",
+        "contacts.0.email": "The HR contact email is essential for administrative communications.",
+        "contacts.0.role": "Assigning the correct role ensures proper access permissions.",
         "waitingPeriodInitial": "Please select the waiting period for initial enrollment.",
         "waitingPeriodNewHires": "Please specify the waiting period for new hires.",
         "defineCoverageTiers": "Choose whether you want to define specific coverage tiers.",
@@ -240,7 +242,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                             // If the user has scrolled UP and the element is now below, or if it's off-screen above,
                             // we check if it's above or below.
                             const isBelow = rect.top > window.innerHeight;
-                            
+
                             if (isBelow) {
                                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                 // Wait for scroll to stabilize
@@ -318,12 +320,17 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 }
 
                 await delay(300);
-                // HR Contact Info (Name & Phone only)
                 if (SAMPLE_CORPORATE_1.contacts && SAMPLE_CORPORATE_1.contacts.length > 0) {
                     const contact = SAMPLE_CORPORATE_1.contacts[0];
                     await fillField("contacts.0.firstName", contact.firstName);
                     await fillField("contacts.0.lastName", contact.lastName);
                     await fillField("contacts.0.phone", contact.phone);
+                    // Added email autofill as per request
+                    await fillField("contacts.0.email", contact.email);
+
+                    // Autofill Role (Moved before Enrollment policies)
+                    await delay(300);
+                    await fillField("contacts.0.role", "HR Admin Access");
                 }
 
                 await fillField("waitingPeriodInitial", SAMPLE_CORPORATE_1.waitingPeriodInitial ? "yes" : "no");
@@ -333,16 +340,17 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 await fillField("showEmployerName", SAMPLE_CORPORATE_1.showEmployerName ? "yes" : "no");
                 await fillField("employeeCount", SAMPLE_CORPORATE_1.employeeCount || 150, true);
 
-                // 2. Speak Feedback & Show in Chat
+                // Final Step: Submit Button Highlight
                 await delay(500);
-                const msg = "I’ve filled the sample company details for you. Please enter the HR contact email below to proceed.";
-                openChat(msg);
-                
-                // 3. Highlight Email
-                setIsEmailHighlighted(true);
-                setActiveFillingField("contacts.0.email");
-                const emailEl = document.getElementById("contacts.0.email");
-                if (emailEl) emailEl.focus();
+                setIsSubmittingHighlighted(true);
+                setIsWorkflowActive(false);
+
+                const finalMsg = "Excellent. This HR contact is now configured. Please click the 'Save & Next' button below to navigate to the next step.";
+                openChat(finalMsg);
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+                setActiveFillingField("submit-button");
+                await speakText(finalMsg);
             };
 
             // Only run if fields are empty to avoid overwriting user edits
@@ -356,56 +364,8 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     }, [setValue]);
 
     useEffect(() => {
-        // Step 1: When email becomes valid, move to Role
-        if (isEmailHighlighted && emailValue && emailValue.includes("@") && emailValue.includes(".")) {
-            if (!hasSpokenRoleRef.current) {
-                hasSpokenRoleRef.current = true;
-                const moveToRole = async () => {
-                    setIsEmailHighlighted(false);
-                    await speakText("Great! Now, please select a role for this contact to define their access level.");
-                    setIsRoleHighlighted(true);
-                    setActiveFillingField("contacts.0.role");
-                    
-                    const el = document.getElementById("contacts.0.role");
-                    if (el) {
-                        const rect = el.getBoundingClientRect();
-                        if (rect.top > window.innerHeight) {
-                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    }
-                };
-                moveToRole();
-            }
-        }
-
         // Step 2: When role is selected, finish guide and prepare for save
-        if (isRoleHighlighted && roleValue && roleValue !== "Select" && roleValue !== "") {
-            const finishGuide = async () => {
-                setIsRoleHighlighted(false);
-                setActiveFillingField(null);
-                
-                openChat("Excellent. This HR contact is now configured. I'm ready to save these details.");
-                
-                // Auto-navigation sequence
-                setIsSubmittingHighlighted(true);
-                let count = 5; // Shorter countdown for better UX
-                setCountdown(count);
-                setIsWorkflowActive(false);
-
-                timerRef.current = setInterval(() => {
-                    count -= 1;
-                    if (count <= 0) {
-                        if (timerRef.current) clearInterval(timerRef.current);
-                        setCountdown(0);
-                        handleSubmit(onSubmit)();
-                    } else {
-                        setCountdown(count);
-                    }
-                }, 1000);
-            };
-            finishGuide();
-            setIsRoleHighlighted(false); // Prevent re-trigger
-        }
+        // Logic moved into runGuide for automated flow
     }, [emailValue, roleValue, isEmailHighlighted, isRoleHighlighted, setValue, handleSubmit]);
 
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
@@ -430,6 +390,8 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 provincialOffices: data.provincialOffices,
                 paymentPlatform: data.paymentPlatform
             });
+            setActiveFillingField(null);
+            setIsSubmittingHighlighted(false);
             engine.setSetupStage("TIERS");
         } catch (error) {
             console.error("Error submitting form:", error);
@@ -441,10 +403,10 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             {/* Guidance Progress Bar */}
             {(isEmailHighlighted || isRoleHighlighted || isSubmittingHighlighted) && (
                 <div className="absolute top-0 left-0 w-full h-1 bg-gray-100 rounded-t-xl overflow-hidden z-[100]">
-                    <div 
+                    <div
                         className="h-full bg-blue-500 transition-all duration-1000 ease-out"
-                        style={{ 
-                            width: isSubmittingHighlighted ? "100%" : isRoleHighlighted ? "75%" : "50%" 
+                        style={{
+                            width: isSubmittingHighlighted ? "100%" : isRoleHighlighted ? "75%" : "50%"
                         }}
                     />
                 </div>
@@ -912,12 +874,13 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
             {/* Save Button */}
             <div className="flex justify-end pt-6">
                 <button
+                    id="submit-button"
                     type="submit"
                     disabled={isSaving}
                     className={clsx(
                         "flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-bold text-white transition-all duration-300 disabled:opacity-50",
                         isSubmittingHighlighted
-                            ? "bg-green-600 ring-4 ring-green-600/20 scale-105 shadow-[0_0_20px_rgba(22,163,74,0.4)]"
+                            ? "bg-[#0a1e3b] ring-4 ring-blue-900/40 scale-105 shadow-[0_0_20px_rgba(10,30,59,0.4)]"
                             : "bg-[#0a1e3b] hover:bg-blue-900 shadow-lg shadow-blue-900/20 hover:shadow-xl hover:-translate-y-0.5"
                     )}
                     onClick={() => {
@@ -926,9 +889,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     }}
                 >
                     {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {isSubmittingHighlighted && countdown !== null && countdown > 0
-                        ? `Auto-saving in ${countdown}s...`
-                        : "Save & Next →"}
+                    Save & Next →
                 </button>
             </div>
             {/* Refined Arrow Pointer Indicator (Follows pointerPos state) */}
@@ -944,11 +905,11 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     <div className="relative flex flex-col items-center animate-nina-pointer-float">
                         {/* The Sharp Pointer Icon - Rotated to point directly down */}
                         <div className="text-red-500 filter drop-shadow-[0_4px_12px_rgba(239,68,68,0.4)] transform rotate-[225deg]">
-                            <MousePointer2 className="w-8 h-8 fill-red-500" />
+                            <MousePointer2 className="w-6 h-6 fill-red-500" />
                         </div>
-                        
+
                         {/* Smooth Pulse Animation (Restored to centered halo) */}
-                        <div className="absolute inset-0 -m-2 rounded-full bg-red-500 animate-ping opacity-20 scale-[1.5]" />
+                        <div className="absolute inset-0 -m-1 rounded-full bg-red-500 animate-ping opacity-20 scale-125" />
                     </div>
                 </div>
             )}
