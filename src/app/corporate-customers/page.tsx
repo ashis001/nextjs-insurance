@@ -46,8 +46,8 @@ export default function CorporateListingPage() {
         if (guideStep === "add_customer") {
             const timer = setTimeout(() => {
                 setActiveGuide("add_customer");
-                openChat("Let’s start by creating the company profile.");
-                // Do NOT clear step here; allow it to persist to the form page
+                // Handled by RightChatPanel sequence now to prevent duplicate speech
+                // openChat("Let’s start by creating the company profile.");
             }, 800);
             return () => clearTimeout(timer);
         }

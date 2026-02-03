@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
     X,
     Send,
@@ -13,7 +14,8 @@ import {
     Pause,
     Play,
     Minimize2,
-    Maximize2
+    Maximize2,
+    MousePointer2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@/context/ChatContext";
@@ -80,6 +82,7 @@ export default function RightChatPanel() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const isInterruptedRef = useRef(false);
     const activeMessageTextRef = useRef<string | null>(null);
+    const [guideTargetRect, setGuideTargetRect] = useState<{ top: number, left: number, width: number, height: number } | null>(null);
 
     // Helper to check and request microphone permissions
     const checkMicrophonePermission = async (): Promise<boolean> => {
@@ -731,7 +734,7 @@ export default function RightChatPanel() {
     return (
         <div
             className={clsx(
-                "fixed bg-white z-[9999] flex flex-col border-2 transition-all duration-300 ease-in-out",
+                "fixed bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100 z-[9999] flex flex-col border-2 transition-all duration-300 ease-in-out",
                 // Dynamic Border Colors
                 isSpeaking ? "border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]" :
                     isListening ? "border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)]" :
@@ -767,15 +770,15 @@ export default function RightChatPanel() {
             <div
                 onMouseDown={handleDragStart}
                 className={clsx(
-                    'flex items-center justify-between p-4 bg-white border-b border-gray-200',
+                    'flex items-center justify-between h-20 px-8 bg-white/70 backdrop-blur-md border-b border-slate-200/60',
                     isFloating ? 'cursor-move select-none' : ''
                 )}>
                 <div className='flex items-center gap-3'>
                     <div className='relative'>
                         <div className={clsx(
-                            'w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white shadow-md relative z-10 transition-all duration-500',
+                            'w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-white shadow-md relative z-10 transition-all duration-500 border-2 border-green-500',
                             isSpeaking ? 'ring-2 ring-green-500 ring-offset-2' :
-                                isListening ? 'ring-2 ring-yellow-400 ring-offset-2' : 'bg-[#1e3a5f]'
+                                isListening ? 'ring-2 ring-yellow-400 ring-offset-2' : ''
                         )}>
                             <img
                                 alt='Voice Assistant'
@@ -799,66 +802,33 @@ export default function RightChatPanel() {
                         )}
                     </div>
                     <div>
-                        <h3 className='text-[#1e3a5f] font-bold text-xs tracking-tight'>
+                        <h3 className='text-[#1e3a5f] font-bold text-sm tracking-tight'>
                             NINA
                         </h3>
-                        {/*  🔊 STRONG SPEAKING WAVE */}
-                        {/* <div className='flex items-center gap-2'>
-          
-              <div className='flex items-end gap-[2px] h-[10px]'>
-                <span
-                  className={clsx(
-                    "w-[2px] rounded-sm bg-green-500 transition-all",
-                    isSpeaking
-                      ? "h-[10px] animate-[microWave_0.9s_infinite] shadow-[0_0_6px_rgba(34,197,94,0.8)]"
-                      : "h-[6px]",
-                  )}
-                />
-                <span
-                  className={clsx(
-                    "w-[2px] rounded-sm bg-green-500 transition-all",
-                    isSpeaking
-                      ? "h-[8px] animate-[microWave_0.7s_infinite] shadow-[0_0_6px_rgba(34,197,94,0.8)]"
-                      : "h-[5px]",
-                  )}
-                />
-                <span
-                  className={clsx(
-                    "w-[2px] rounded-sm bg-green-500 transition-all",
-                    isSpeaking
-                      ? "h-[9px] animate-[microWave_1.1s_infinite] shadow-[0_0_6px_rgba(34,197,94,0.8)]"
-                      : "h-[6px]",
-                  )}
-                />
-              </div>
 
-           
-              <span className='text-[10px] font-semibold  text-gray-500'>
-                {isSpeaking ? "Speaking..." : "Online & Ready"}
-              </span>
-            </div> */}
-
-                        <p className='text-gray-500 text-[10px] flex items-center gap-2 font-semibold'>
-                            <span className='relative flex h-2 w-2'>
-                                {isSpeaking && (
-                                    <>
-                                        <span className='absolute inset-[-2px] inline-flex h-full w-full rounded-full bg-green-400 animate-ping opacity-75' />
-                                        <span className='absolute inset-[-4px] inline-flex h-full w-full rounded-full bg-green-300 animate-pulse opacity-40' />
-                                    </>
-                                )}
-                                {isListening && (
-                                    <>
-                                        <span className='absolute inset-[-2px] inline-flex h-full w-full rounded-full bg-yellow-400 animate-ping opacity-75' />
-                                        <span className='absolute inset-[-4px] inline-flex h-full w-full rounded-full bg-yellow-300 animate-pulse opacity-40' />
-                                    </>
-                                )}
-                                <span className={clsx(
-                                    'relative inline-flex rounded-full h-2 w-2 transition-colors duration-300',
-                                    isListening ? 'bg-yellow-400' : 'bg-green-500'
-                                )} />
-                            </span>
-                            {isSpeaking ? "Speaking..." : isListening ? "Listening..." : "Online"}
-                        </p>
+                        {(isSpeaking || isListening) && (
+                            <p className='text-gray-500 text-[10px] flex items-center gap-2 font-semibold'>
+                                <span className='relative flex h-2 w-2'>
+                                    {isSpeaking && (
+                                        <>
+                                            <span className='absolute inset-[-2px] inline-flex h-full w-full rounded-full bg-green-400 animate-ping opacity-75' />
+                                            <span className='absolute inset-[-4px] inline-flex h-full w-full rounded-full bg-green-300 animate-pulse opacity-40' />
+                                        </>
+                                    )}
+                                    {isListening && (
+                                        <>
+                                            <span className='absolute inset-[-2px] inline-flex h-full w-full rounded-full bg-yellow-400 animate-ping opacity-75' />
+                                            <span className='absolute inset-[-4px] inline-flex h-full w-full rounded-full bg-yellow-300 animate-pulse opacity-40' />
+                                        </>
+                                    )}
+                                    <span className={clsx(
+                                        'relative inline-flex rounded-full h-2 w-2 transition-colors duration-300',
+                                        isListening ? 'bg-yellow-400' : 'bg-green-500'
+                                    )} />
+                                </span>
+                                {isSpeaking ? "Speaking..." : "Listening..."}
+                            </p>
+                        )}
                     </div>
                 </div>
                 <div className='flex items-center gap-1'>
@@ -867,30 +837,30 @@ export default function RightChatPanel() {
                             onClick={() => {
                                 setIsWorkflowPaused(!isWorkflowPaused);
                             }}
-                            className='p-2 rounded-full transition-all text-red-500 hover:bg-red-50/80'
+                            className='p-2 rounded-full transition-all text-gray-400 hover:bg-gray-50'
                             title={isWorkflowPaused ? "Resume Workflow" : "Stop Workflow"}
                         >
-                            {isWorkflowPaused ? <Play size={20} className="fill-current" /> : <Pause size={20} className="fill-current" />}
+                            {isWorkflowPaused ? <Play size={20} /> : <Pause size={20} />}
                         </button>
                     )}
-                    <button
-                        onClick={() => setIsFloating(!isFloating)}
-                        className='p-2 rounded-full transition-all text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100'
-                        title={isFloating ? "Dock to Right" : "Float / Minimize"}
-                    >
-                        {isFloating ? <Maximize2 size={18} /> : <Minimize2 size={18} />}
-                    </button>
                     <button
                         onClick={() => {
                             setIsMuted(!isMuted);
                         }}
                         className={clsx(
                             'p-2 rounded-full transition-all',
-                            isMuted ? 'text-red-500 bg-red-50/80' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                            isMuted ? 'text-gray-400 bg-gray-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
                         )}
                         title={isMuted ? "Unmute Speaker" : "Mute Speaker"}
                     >
                         {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                    </button>
+                    <button
+                        onClick={() => setIsFloating(!isFloating)}
+                        className='p-2 rounded-full transition-all text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100'
+                        title={isFloating ? "Dock to Right" : "Float / Minimize"}
+                    >
+                        {isFloating ? <Maximize2 size={18} /> : <Minimize2 size={18} />}
                     </button>
                     <button
                         onClick={() => {
@@ -905,7 +875,7 @@ export default function RightChatPanel() {
             </div>
 
             {/* Chat Messages Area */}
-            <div className='flex-1 overflow-y-auto p-4 pb-6 space-y-2.5 bg-[#fcfdfe]'>
+            <div className='flex-1 overflow-y-auto p-4 pb-6 space-y-2.5'>
                 {messages.map((msg) => (
                     <div
                         key={msg.id}
@@ -943,8 +913,35 @@ export default function RightChatPanel() {
                                                 if (action.value === "real") {
                                                     handleSend("Use Real Customer");
                                                 } else if (action.value === "sample") {
-                                                    localStorage.setItem("max_guide_step", "add_customer");
-                                                    router.push("/corporate-customers");
+                                                    // Interactive Guide Logic
+                                                    const navItem = document.getElementById("nav-item-corporate-customers");
+                                                    if (navItem) {
+                                                        // 1. Speak & Show Message
+                                                        streamMessage("Please select the Corporate Customer tab on the sidebar.", "assistant");
+
+                                                        const rect = navItem.getBoundingClientRect();
+                                                        setGuideTargetRect({
+                                                            top: rect.top,
+                                                            left: rect.left,
+                                                            width: rect.width,
+                                                            height: rect.height
+                                                        });
+
+                                                        // 2. Wait 4 seconds, Speak next part, then Navigate
+                                                        setTimeout(async () => {
+                                                            setGuideTargetRect(null);
+                                                            await streamMessage("Let’s start by creating the company profile.", "assistant");
+
+                                                            setTimeout(() => {
+                                                                localStorage.setItem("max_guide_step", "add_customer");
+                                                                router.push("/corporate-customers");
+                                                            }, 1500);
+                                                        }, 4000);
+                                                    } else {
+                                                        // Fallback
+                                                        localStorage.setItem("max_guide_step", "add_customer");
+                                                        router.push("/corporate-customers");
+                                                    }
                                                 } else if (action.value === "sample_claim") {
                                                     localStorage.setItem("max_guide_step", "claim_insurance");
                                                     router.push("/claims");
@@ -985,13 +982,13 @@ export default function RightChatPanel() {
             </div>
 
             {/* Input Section */}
-            <div className='p-4 bg-white border-t border-gray-200'>
+            <div className='p-4 bg-white/80 backdrop-blur-md border-t border-slate-200/60'>
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
                         handleSend();
                     }}
-                    className='flex items-center gap-2 bg-gray-50 rounded-2xl border border-gray-300 p-1.5 focus-within:border-[#1e3a5f] focus-within:ring-2 focus-within:ring-[#1e3a5f]/10 transition-all'>
+                    className='flex items-center gap-2 bg-white rounded-2xl border-2 border-slate-300 p-1.5 focus-within:border-[#1e3a5f] focus-within:ring-2 focus-within:ring-[#1e3a5f]/20 transition-all shadow-sm'>
                     <button
                         type='button'
                         onClick={toggleListening}
@@ -999,7 +996,7 @@ export default function RightChatPanel() {
                             "transition-all p-2.5 rounded-xl shadow-sm",
                             isVoiceMode
                                 ? "text-red-500 bg-red-50 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)]"
-                                : "text-gray-500 hover:text-[#1e3a5f] hover:bg-white"
+                                : "text-gray-500 hover:text-[#1e3a5f] hover:bg-gray-50"
                         )}
                         title={isVoiceMode ? "Stop voice mode" : "Start voice mode"}>
                         {isVoiceMode ? <MicOff size={20} /> : <Mic size={20} />}
@@ -1010,7 +1007,7 @@ export default function RightChatPanel() {
 
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        className='flex-1 bg-transparent text-gray-800 text-[13px] outline-none py-2 px-1 placeholder:text-gray-400 font-medium'
+                        className='flex-1 bg-transparent text-gray-900 text-[13px] outline-none py-2 px-1 placeholder:text-gray-400 font-medium'
                     />
                     <button
                         type='submit'
@@ -1025,6 +1022,43 @@ export default function RightChatPanel() {
                     </button>
                 </form>
             </div>
+            {guideTargetRect && typeof document !== "undefined" && createPortal(
+                <div
+                    style={{
+                        position: "fixed",
+                        // Position BELOW the element (top + height)
+                        top: guideTargetRect.top + guideTargetRect.height + 10,
+                        // Center horizontally
+                        left: guideTargetRect.left + guideTargetRect.width / 2,
+                        zIndex: 999999,
+                        pointerEvents: "none",
+                        // Center the div, but minimal vertical offset since we are positioning relative to top
+                        transform: "translate(-50%, 0)"
+                    }}
+                >
+                    <div className="relative flex flex-col items-center">
+                        {/* Rotate 180 (or appropriate arithmetic) if we want it to point UP?
+                            MousePointer2 points Top-Left by default.
+                            If we want it to point UP, we need to rotate somewhat.
+                            MaxGuidePointer uses rotate-[45deg] to point "inwards/up"?
+                            Let's try sticking to the request: "Tip should up".
+                            MousePointer2 (10 o'clock) -> Rotate 135deg -> 3 o'clock?
+                            Rotate -45 -> 9 o'clock.
+                            Rotate -90 -> 7 o'clock.
+                            Actually, simpler: Just use rotate-[-45deg] or rotate-[45deg] depending on visual preference.
+                            Let's use the explicit request: "tip should up".
+                            Default is Top-Left. 
+                            rotate(45deg) -> Top.
+                            Let's try that.
+                         */}
+                        <div className="text-red-500 filter drop-shadow-[0_4px_12px_rgba(239,68,68,0.4)] animate-bounce transform rotate-[45deg]">
+                            <MousePointer2 className="w-7 h-7 fill-red-500" />
+                        </div>
+                        <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20 scale-125" />
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 }

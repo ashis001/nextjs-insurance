@@ -116,10 +116,7 @@ export default function ClaimsPage() {
                 const nextBtn = document.getElementById("next-step-btn");
                 if (nextBtn) {
                     setActiveFillingField("next-step-btn");
-                    await speakText("Great! Now click continue to proceed to document uploads.");
-                    await delay(1500);
-                    setStep(3);
-                    setActiveFillingField(null);
+                    await speakText("Great! I've prepared the details. Now click the 'Continue to Uploads' button to proceed.");
                 }
 
                 await delay(1000);
@@ -165,6 +162,7 @@ export default function ClaimsPage() {
     }, [activeFillingField]);
 
     const handleNext = () => {
+        setActiveFillingField(null); // Clear guidance when user clicks
         if (step === 4) {
             handleSubmit();
         } else {
