@@ -11,11 +11,17 @@ interface ChatContextType {
     setHasGreeted: (val: boolean) => void;
     isMuted: boolean;
     setIsMuted: (val: boolean) => void;
+    isWorkflowPaused: boolean;
+    setIsWorkflowPaused: (val: boolean) => void;
+    isWorkflowActive: boolean;
+    setIsWorkflowActive: (val: boolean) => void;
     toggleChat: () => void;
     openChat: (message?: string) => void;
     closeChat: () => void;
     clearExternalMessage: () => void;
     updateWidth: (newWidth: number) => void;
+    isFloating: boolean;
+    setIsFloating: (val: boolean) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -26,6 +32,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const [externalMessage, setExternalMessage] = useState<string | null>(null);
     const [hasGreeted, setHasGreetedState] = useState(false);
     const [isMuted, setIsMutedState] = useState(false);
+    const [isWorkflowPaused, setIsWorkflowPaused] = useState(false);
+    const [isWorkflowActive, setIsWorkflowActive] = useState(false);
+    const [isFloating, setIsFloating] = useState(false);
 
     // Load saved states from storage
     useEffect(() => {
@@ -64,6 +73,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const closeChat = useCallback(() => {
         stopSpeech();
         setIsOpen(false);
+        setIsFloating(false); // Always reset to sidebar mode on close
         // We keep the mute state as is when closing, 
         // but it will reset on next open as per openChat logic
     }, []);
@@ -90,11 +100,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             setHasGreeted,
             isMuted,
             setIsMuted,
+            isWorkflowPaused,
+            setIsWorkflowPaused,
+            isWorkflowActive,
+            setIsWorkflowActive,
             toggleChat,
             openChat,
             closeChat,
             clearExternalMessage,
-            updateWidth
+            updateWidth,
+            isFloating,
+            setIsFloating
         }}>
             {children}
         </ChatContext.Provider>

@@ -5,8 +5,10 @@ import {
     FileText, CheckCircle, Clock, Shield, DollarSign, Calendar,
     Heart, Stethoscope, Eye, Activity, UploadCloud, ChevronRight, ChevronLeft, ArrowRight, Sparkles
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useChat } from "@/context/ChatContext";
+import { speakText } from "@/lib/google-tts";
+import { MousePointer2 } from "lucide-react";
 
 const AnimatedGrid = () => (
     <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
@@ -29,11 +31,22 @@ const INSURANCE_TYPES = [
 ];
 
 export default function ClaimsPage() {
-    const { toggleChat } = useChat();
+    const { toggleChat, openChat, isWorkflowPaused, setIsWorkflowActive } = useChat();
+    const isWorkflowPausedRef = useRef(isWorkflowPaused);
+
+    useEffect(() => {
+        isWorkflowPausedRef.current = isWorkflowPaused;
+    }, [isWorkflowPaused]);
+
     const [step, setStep] = useState(1);
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Guidance State
+    const [activeFillingField, setActiveFillingField] = useState<string | null>(null);
+    const [pointerPos, setPointerPos] = useState<{ top: number, left: number } | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // Mock Form Data State
     const [formData, setFormData] = useState({
@@ -45,7 +58,111 @@ export default function ClaimsPage() {
 
     useEffect(() => {
         setMounted(true);
+
+        const guideStep = localStorage.getItem("max_guide_step");
+        if (guideStep === "claim_insurance") {
+            const runGuide = async () => {
+                setIsWorkflowActive(true);
+                const delay = async (ms: number) => {
+                    await new Promise(resolve => setTimeout(resolve, ms));
+                    while (isWorkflowPausedRef.current) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                };
+                await delay(1000);
+
+                // Step 1: Select Category
+                const targetId = "category-health";
+                const el = document.getElementById(targetId);
+                if (el) {
+                    setActiveFillingField(targetId);
+                    await speakText("To start your claim, first select a medical category. Let's choose Medical Health.");
+                    await delay(1500);
+                    setSelectedType('health');
+                    setStep(2);
+                    setActiveFillingField(null);
+                }
+
+                await delay(1000);
+
+                // Step 2: Fill Form
+                const fillField = async (id: string, value: string, text: string) => {
+                    setActiveFillingField(id);
+                    const input = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement;
+                    if (input) {
+                        const rect = input.getBoundingClientRect();
+                        if (rect.top > window.innerHeight) {
+                            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            await delay(400);
+                        }
+                        input.focus({ preventScroll: true });
+                        await speakText(text);
+                        await delay(500);
+                        let current = "";
+                        for (const char of value) {
+                            current += char;
+                            setFormData(prev => ({ ...prev, [id]: current }));
+                            await delay(30 + Math.random() * 20);
+                        }
+                        await delay(500);
+                    }
+                };
+
+                await fillField("provider", "City General Hospital", "Enter the name of your medical provider.");
+                await fillField("date", "2026-02-01", "Select the date of service from your invoice.");
+                await fillField("amount", "245.50", "Enter the total claim amount.");
+                await fillField("diagnosis", "Regular checkup and flu vaccination.", "Briefly describe the reason for your visit.");
+
+                const nextBtn = document.getElementById("next-step-btn");
+                if (nextBtn) {
+                    setActiveFillingField("next-step-btn");
+                    await speakText("Great! Now click continue to proceed to document uploads.");
+                    await delay(1500);
+                    setStep(3);
+                    setActiveFillingField(null);
+                }
+
+                await delay(1000);
+                // Final Step 3 Message
+                openChat("I've prepared the claim details for you. Simply upload your receipt here and click Review to finish!");
+                setIsWorkflowActive(false);
+                localStorage.removeItem("max_guide_step");
+            };
+            runGuide();
+        }
     }, []);
+
+    // Pointer Sync
+    useEffect(() => {
+        if (!activeFillingField) {
+            setPointerPos(null);
+            return;
+        }
+
+        const updatePosition = () => {
+            const el = document.getElementById(activeFillingField);
+            const container = containerRef.current;
+            if (el && container) {
+                const rect = el.getBoundingClientRect();
+                const contRect = container.getBoundingClientRect();
+                setPointerPos({
+                    top: rect.top - contRect.top,
+                    left: rect.left - contRect.left + rect.width / 2
+                });
+            }
+        };
+
+        updatePosition();
+        const rafId = requestAnimationFrame(function tick() {
+            updatePosition();
+            requestAnimationFrame(tick);
+        });
+        window.addEventListener('resize', updatePosition);
+        return () => {
+            cancelAnimationFrame(rafId);
+            window.removeEventListener('resize', updatePosition);
+        };
+    }, [activeFillingField]);
 
     const handleNext = () => {
         if (step === 4) {
@@ -69,10 +186,29 @@ export default function ClaimsPage() {
     if (!mounted) return null;
 
     return (
-        <div className="flex min-h-screen bg-gradient-to-tr from-slate-200 via-indigo-50 to-blue-100 font-sans selection:bg-blue-600/10">
+        <div className="flex min-h-screen bg-gradient-to-tr from-slate-200 via-indigo-50 to-blue-100 font-sans selection:bg-blue-600/10" ref={containerRef}>
             <Sidebar />
             <main className="flex-1 ml-64 relative overflow-hidden flex flex-col">
                 <AnimatedGrid />
+
+                {/* Pointer Indicator */}
+                {activeFillingField && pointerPos && (
+                    <div
+                        className="absolute z-[10000] pointer-events-none transition-all duration-500 ease-in-out"
+                        style={{
+                            left: pointerPos.left,
+                            top: pointerPos.top - 10,
+                            transform: 'translate(-50%, -100%)'
+                        }}
+                    >
+                        <div className="relative flex flex-col items-center animate-nina-pointer-float">
+                            <div className="text-red-500 filter drop-shadow-[0_4px_12px_rgba(239,68,68,0.4)] transform rotate-[225deg]">
+                                <MousePointer2 className="w-8 h-8 fill-red-500" />
+                            </div>
+                            <div className="absolute inset-0 -m-2 rounded-full bg-red-500 animate-ping opacity-20 scale-[1.5]" />
+                        </div>
+                    </div>
+                )}
 
                 {/* Dynamic Background Accents */}
                 <div className="absolute top-[-10%] left-[-5%] w-[400px] h-[400px] bg-blue-400/10 rounded-full blur-[100px] pointer-events-none animate-pulse" />
@@ -123,6 +259,7 @@ export default function ClaimsPage() {
                                 {INSURANCE_TYPES.map((type) => (
                                     <div
                                         key={type.id}
+                                        id={`category-${type.id}`}
                                         onClick={() => { setSelectedType(type.id); setStep(2); }}
                                         className="group bg-white/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer relative overflow-hidden"
                                     >
@@ -161,6 +298,7 @@ export default function ClaimsPage() {
                                         <div className="relative">
                                             <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                             <input
+                                                id="provider"
                                                 type="text"
                                                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-sm font-medium transition-all"
                                                 placeholder="e.g. City General Hospital"
@@ -174,6 +312,7 @@ export default function ClaimsPage() {
                                         <div className="relative">
                                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                             <input
+                                                id="date"
                                                 type="date"
                                                 className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-sm font-medium transition-all text-slate-600"
                                                 value={formData.date}
@@ -188,6 +327,7 @@ export default function ClaimsPage() {
                                     <div className="relative">
                                         <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                         <input
+                                            id="amount"
                                             type="number"
                                             className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-sm font-medium transition-all"
                                             placeholder="0.00"
@@ -200,6 +340,7 @@ export default function ClaimsPage() {
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Reason / Diagnosis</label>
                                     <textarea
+                                        id="diagnosis"
                                         className="w-full p-4 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-sm font-medium transition-all min-h-[100px]"
                                         placeholder="Describe the reason for the visit..."
                                         value={formData.diagnosis}
@@ -208,7 +349,7 @@ export default function ClaimsPage() {
                                 </div>
                             </div>
 
-                            <button onClick={handleNext} className="w-full mt-8 bg-[#0a1e3b] text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2">
+                            <button id="next-step-btn" onClick={handleNext} className="w-full mt-8 bg-[#0a1e3b] text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2">
                                 Continue to Uploads <ArrowRight className="w-4 h-4" />
                             </button>
                         </div>

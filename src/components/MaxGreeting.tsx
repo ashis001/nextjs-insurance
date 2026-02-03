@@ -66,7 +66,7 @@ export default function MaxGreeting() {
                         className="w-full h-full object-cover object-top"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/0 to-transparent" />
-                    
+
                     {/* Subtle Background Wave Ripples */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                         <div className="w-48 h-48 rounded-full border-2 border-blue-400/50 animate-nina-wave" />
