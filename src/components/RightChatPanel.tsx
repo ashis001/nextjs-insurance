@@ -9,7 +9,11 @@ import {
     Mic,
     MicOff,
     Volume2,
-    VolumeX
+    VolumeX,
+    Pause,
+    Play,
+    Minimize2,
+    Maximize2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@/context/ChatContext";
@@ -37,13 +41,37 @@ export default function RightChatPanel() {
         clearExternalMessage,
         isMuted,
         setIsMuted,
+        isWorkflowPaused,
+        setIsWorkflowPaused,
+        isWorkflowActive,
+        isFloating,
+        setIsFloating,
     } = useChat();
     const [inputValue, setInputValue] = useState("");
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isListening, setIsListening] = useState(false);
     const [isVoiceMode, setIsVoiceMode] = useState(false); // Persistent voice mode
     const [pendingContext, setPendingContext] = useState<string | null>(null); // NEW: Track conversational state
+
+    // Dragging State
+    const [position, setPosition] = useState({ x: 0, y: 0 }); // Controlled by layout effect
+    const [hasInitializedPosition, setHasInitializedPosition] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+    // Initialize position to bottom right once on mount or first float
+    useEffect(() => {
+        if (typeof window !== "undefined" && !hasInitializedPosition) {
+            setPosition({
+                x: window.innerWidth - 350,
+                y: window.innerHeight - 520
+            });
+            setHasInitializedPosition(true);
+        }
+    }, [hasInitializedPosition]);
+
     const recognitionRef = useRef<any>(null);
+    const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const transcriptRef = useRef("");
     const isVoiceModeRef = useRef(false); // Using ref for immediate sync in callbacks
     const [isTyping, setIsTyping] = useState(false);
@@ -77,24 +105,51 @@ export default function RightChatPanel() {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
             if (SpeechRecognition) {
                 recognitionRef.current = new SpeechRecognition();
-                recognitionRef.current.continuous = false;
+                recognitionRef.current.continuous = true;
                 recognitionRef.current.interimResults = true;
 
                 recognitionRef.current.onresult = (event: any) => {
-                    const transcript = Array.from(event.results)
-                        .map((result: any) => result[0])
-                        .map((result: any) => result.transcript)
+                    let fullTranscript = "";
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        fullTranscript += event.results[i][0].transcript;
+                    }
+
+                    // For continuous mode, we want to accumulate the entire session's text
+                    // or just the current segment. Let's use the full results array for accuracy.
+                    const currentFullTranscript = Array.from(event.results)
+                        .map((result: any) => result[0].transcript)
                         .join("");
 
-                    transcriptRef.current = transcript;
-                    setInputValue(transcript);
+                    transcriptRef.current = currentFullTranscript;
+                    setInputValue(currentFullTranscript);
+
+                    // --- SILENCE DETECTION DEBOUNCE ---
+                    if (silenceTimerRef.current) {
+                        clearTimeout(silenceTimerRef.current);
+                    }
+
+                    if (currentFullTranscript.trim()) {
+                        silenceTimerRef.current = setTimeout(() => {
+                            if (transcriptRef.current.trim()) {
+                                handleSend(transcriptRef.current);
+                                transcriptRef.current = "";
+                                recognitionRef.current?.stop();
+                            }
+                        }, 4000); // 4 seconds gap
+                    }
                 };
 
                 recognitionRef.current.onend = () => {
                     setIsListening(false);
-                    if (transcriptRef.current.trim()) {
-                        handleSend(transcriptRef.current);
-                        transcriptRef.current = "";
+                    // If silenceTimerRef.current is still set, it means we stopped before the 2.5s timer fired
+                    // (e.g. manual stop or system timeout). In this case, we should send the transcript.
+                    if (silenceTimerRef.current) {
+                        clearTimeout(silenceTimerRef.current);
+                        silenceTimerRef.current = null;
+                        if (transcriptRef.current.trim()) {
+                            handleSend(transcriptRef.current);
+                            transcriptRef.current = "";
+                        }
                     }
                 };
 
@@ -102,29 +157,41 @@ export default function RightChatPanel() {
                     console.error("Speech recognition error:", event.error);
 
                     // Provide user feedback based on error type
+                    let shouldStopVoiceMode = false;
                     switch (event.error) {
                         case 'not-allowed':
                         case 'service-not-allowed':
                             alert("🎤 Microphone access denied. Please enable permissions.");
+                            shouldStopVoiceMode = true;
                             break;
                         case 'no-speech':
-                            // Silently handle no speech, just stop listening
+                            // Silently handle no speech, just stop listening state but keep voice mode active
                             console.log("No speech detected.");
                             break;
                         case 'audio-capture':
                             alert("🎤 Microphone not available. Please check your device.");
+                            shouldStopVoiceMode = true;
                             break;
                         case 'network':
-                            alert("🌐 Network error. Please check your connection.");
+                            console.log("🌐 Network error in recognition.");
+                            break;
+                        case 'aborted':
+                            console.log("Recognition aborted (likely manual stop or state switch).");
                             break;
                         default:
-                            // For other errors, we just stop
                             console.log("Recognition stopped due to error:", event.error);
                     }
 
+                    if (silenceTimerRef.current) {
+                        clearTimeout(silenceTimerRef.current);
+                        silenceTimerRef.current = null;
+                    }
+
                     setIsListening(false);
-                    setIsVoiceMode(false);
-                    isVoiceModeRef.current = false;
+                    if (shouldStopVoiceMode) {
+                        setIsVoiceMode(false);
+                        isVoiceModeRef.current = false;
+                    }
                 };
             }
         }
@@ -153,6 +220,8 @@ export default function RightChatPanel() {
                 // Small delay to ensure cleanup
                 setTimeout(() => {
                     try {
+                        transcriptRef.current = "";
+                        setInputValue("");
                         recognitionRef.current?.start();
                         setIsListening(true);
                         setIsVoiceMode(true);
@@ -241,33 +310,36 @@ export default function RightChatPanel() {
         activeMessageTextRef.current = null;
 
         // Auto-reactivate mic if voice mode is active and not interrupted
-        if (isVoiceModeRef.current && !isInterruptedRef.current && !isMuted) {
+        // Removed !isMuted check so voice input works even if assistant is quiet
+        if (isVoiceModeRef.current && !isInterruptedRef.current) {
             setTimeout(() => {
                 try {
                     // Prevent multiple starts
-                    if (isListening) return;
+                    if (isListening || isSpeaking) return;
 
+                    transcriptRef.current = "";
+                    setInputValue("");
                     recognitionRef.current?.start();
                     setIsListening(true);
                 } catch (err: any) {
                     console.error("Auto-mic start failed:", err);
                     // Only retry if it's not a permission issue and was previously active
-                    if (isVoiceModeRef.current && !err.message?.includes('not-allowed')) {
+                    const isPermissionError = err.message?.includes('not-allowed') || err.name === 'NotAllowedError';
+                    if (isVoiceModeRef.current && !isPermissionError) {
                         setTimeout(() => {
                             try {
-                                if (!isListening) {
+                                if (!isListening && !isSpeaking) {
                                     recognitionRef.current?.start();
                                     setIsListening(true);
                                 }
                             } catch (e) {
-                                console.log("Retry also failed, voice mode disabled");
-                                setIsVoiceMode(false);
-                                isVoiceModeRef.current = false;
+                                console.log("Retry also failed, keeping voice mode but mic inactive");
+                                // We don't force disable voice mode here to keep the UI state
                             }
-                        }, 1000);
+                        }, 1500);
                     }
                 }
-            }, 600); // Increased delay to allow audio to fully release device
+            }, 1000); // Increased delay to 1000ms to allow audio device to fully release
         }
     };
 
@@ -409,8 +481,57 @@ export default function RightChatPanel() {
             window.removeEventListener("mouseup", stopResizing);
         };
     }, [isResizing, handleMouseMove, stopResizing]);
+
+    // Dragging Logic for Floating Mode
+    const handleDragStart = (e: React.MouseEvent) => {
+        if (!isFloating) return;
+        setIsDragging(true);
+        dragOffsetRef.current = {
+            x: e.clientX - (window.innerWidth - position.x - (isFloating ? 350 : width)),
+            y: e.clientY - position.y
+        };
+        // We actually want simpler logic for position from top-right
+        const rect = e.currentTarget.getBoundingClientRect();
+        dragOffsetRef.current = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+    };
+
+    useEffect(() => {
+        const handleDragMove = (e: MouseEvent) => {
+            if (!isDragging || !isFloating) return;
+
+            const newX = window.innerWidth - (e.clientX - dragOffsetRef.current.x) - (isFloating ? 380 : width);
+            const newY = e.clientY - dragOffsetRef.current.y;
+
+            // Simpler: Just track from left/top and convert to styles
+            setPosition({
+                x: e.clientX - dragOffsetRef.current.x,
+                y: e.clientY - dragOffsetRef.current.y
+            });
+        };
+
+        const handleDragEnd = () => {
+            setIsDragging(false);
+        };
+
+        if (isDragging) {
+            window.addEventListener("mousemove", handleDragMove);
+            window.addEventListener("mouseup", handleDragEnd);
+        }
+        return () => {
+            window.removeEventListener("mousemove", handleDragMove);
+            window.removeEventListener("mouseup", handleDragEnd);
+        };
+    }, [isDragging, isFloating, width]);
+
     const handleSend = async (overrideValue?: string) => {
         // Stop current listening for processing
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+        }
         try {
             recognitionRef.current?.stop();
         } catch (e) {
@@ -461,6 +582,22 @@ export default function RightChatPanel() {
                         return;
                     }
                 }
+            } else if (pendingContext === "claim_sample_prompt") {
+                const positiveResponses = ["yes", "sure", "ok", "yep", "do it", "use sample", "sample data", "sample_claim"];
+                const negativeResponses = ["no", "never mind", "skip", "real", "real customer", "real_claim"];
+
+                if (positiveResponses.some(r => query.includes(r))) {
+                    setPendingContext(null);
+                    localStorage.setItem("max_guide_step", "claim_insurance");
+                    router.push("/claims");
+                    return;
+                } else if (negativeResponses.some(r => query.includes(r))) {
+                    setPendingContext(null);
+                    if (query.includes("real")) {
+                        router.push("/claims");
+                        return;
+                    }
+                }
             }
             // Clear context if user says something unrelated
             setPendingContext(null);
@@ -471,6 +608,29 @@ export default function RightChatPanel() {
             const isOnboardingQuery =
                 query.includes("onboard") ||
                 ((query.includes("add") || query.includes("create") || query.includes("how to")) && (query.includes("customer") || query.includes("corporate")));
+
+            const isClaimQuery =
+                query.includes("claim") &&
+                (query.includes("how to") || query.includes("insurance") || query.includes("policy") || query.includes("medical"));
+
+            if (isClaimQuery) {
+                if (isInterruptedRef.current) return;
+                setIsTyping(false);
+                const introText = "Got it. You want to know how to claim insurance.";
+                await streamMessage(introText, "assistant");
+
+                setIsTyping(true);
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+                setIsTyping(false);
+
+                const followUpText = "Would you like to do a sample claim first?";
+                setPendingContext("claim_sample_prompt"); // Set context for claim
+                await streamMessage(followUpText, "assistant", [
+                    { label: "Use Sample Data", value: "sample_claim" },
+                    { label: "Use Real Customer", value: "real_claim" },
+                ]);
+                return;
+            }
 
             if (isOnboardingQuery) {
                 if (isInterruptedRef.current) return;
@@ -571,28 +731,45 @@ export default function RightChatPanel() {
     return (
         <div
             className={clsx(
-                "fixed top-0 right-0 h-full bg-white z-[9999] flex flex-col border-l border-gray-300 shadow-[-4px_0_20px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out",
-                isOpen ? "translate-x-0" : "translate-x-full overflow-hidden w-0",
+                "fixed bg-white z-[9999] flex flex-col border-2 transition-all duration-300 ease-in-out",
+                // Dynamic Border Colors
+                isSpeaking ? "border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]" :
+                    isListening ? "border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)]" :
+                        "border-gray-200 shadow-[-4px_0_20px_rgba(0,0,0,0.1)]",
+
+                isFloating ? "rounded-2xl overflow-hidden h-[480px] max-h-[85vh]" : "top-0 right-0 h-full border-l border-y-0 border-r-0",
+                isOpen ? (isFloating ? "opacity-100 scale-100" : "translate-x-0") : (isFloating ? "opacity-0 scale-95 pointer-events-none" : "translate-x-full overflow-hidden w-0"),
+                isDragging && "transition-none"
             )}
             style={{
-                width: isOpen ? `${width}px` : "0px",
-                transition: isResizing
+                width: isOpen ? (isFloating ? "330px" : `${width}px`) : "0px",
+                right: isFloating ? "auto" : "0",
+                left: isFloating ? `${position.x}px` : "auto",
+                top: isFloating ? `${position.y}px` : "0",
+                transition: (isResizing || isDragging)
                     ? "none"
-                    : "width 300ms ease-in-out, transform 300ms ease-in-out",
+                    : "width 300ms ease-in-out, transform 300ms ease-in-out, left 300ms ease-in-out, top 300ms ease-in-out, border-color 300ms, box-shadow 300ms, opacity 300ms, scale 300ms",
             }}>
-            {/* Resize Handle */}
-            <div
-                onMouseDown={startResizing}
-                className={clsx(
-                    "absolute left-0 top-0 h-full w-1 cursor-col-resize z-[10000] transition-colors",
-                    isResizing ? "bg-[#1e3a5f]" : "hover:bg-[#1e3a5f]/30",
-                )}
-                title='Drag to resize'>
-                <div className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[2px] h-6 bg-gray-200 rounded-full' />
-            </div>
+            {/* Resize Handle - Only in Sidebar Mode */}
+            {!isFloating && (
+                <div
+                    onMouseDown={startResizing}
+                    className={clsx(
+                        "absolute left-0 top-0 h-full w-1 cursor-col-resize z-[10000] transition-colors",
+                        isResizing ? "bg-[#1e3a5f]" : "hover:bg-[#1e3a5f]/30",
+                    )}
+                    title='Drag to resize'>
+                    <div className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[2px] h-6 bg-gray-200 rounded-full' />
+                </div>
+            )}
 
             {/* Header */}
-            <div className='flex items-center justify-between p-4 bg-white border-b border-gray-200'>
+            <div
+                onMouseDown={handleDragStart}
+                className={clsx(
+                    'flex items-center justify-between p-4 bg-white border-b border-gray-200',
+                    isFloating ? 'cursor-move select-none' : ''
+                )}>
                 <div className='flex items-center gap-3'>
                     <div className='relative'>
                         <div className={clsx(
@@ -622,7 +799,7 @@ export default function RightChatPanel() {
                         )}
                     </div>
                     <div>
-                        <h3 className='text-[#1e3a5f] font-bold text-sm tracking-tight'>
+                        <h3 className='text-[#1e3a5f] font-bold text-xs tracking-tight'>
                             NINA
                         </h3>
                         {/*  🔊 STRONG SPEAKING WAVE */}
@@ -685,15 +862,33 @@ export default function RightChatPanel() {
                     </div>
                 </div>
                 <div className='flex items-center gap-1'>
+                    {isWorkflowActive && (
+                        <button
+                            onClick={() => {
+                                setIsWorkflowPaused(!isWorkflowPaused);
+                            }}
+                            className='p-2 rounded-full transition-all text-red-500 hover:bg-red-50/80'
+                            title={isWorkflowPaused ? "Resume Workflow" : "Stop Workflow"}
+                        >
+                            {isWorkflowPaused ? <Play size={20} className="fill-current" /> : <Pause size={20} className="fill-current" />}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setIsFloating(!isFloating)}
+                        className='p-2 rounded-full transition-all text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100'
+                        title={isFloating ? "Dock to Right" : "Float / Minimize"}
+                    >
+                        {isFloating ? <Maximize2 size={18} /> : <Minimize2 size={18} />}
+                    </button>
                     <button
                         onClick={() => {
                             setIsMuted(!isMuted);
                         }}
                         className={clsx(
                             'p-2 rounded-full transition-all',
-                            isMuted ? 'text-red-500 bg-red-50' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                            isMuted ? 'text-red-500 bg-red-50/80' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
                         )}
-                        title={isMuted ? "Unmute" : "Mute"}
+                        title={isMuted ? "Unmute Speaker" : "Mute Speaker"}
                     >
                         {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                     </button>
@@ -722,7 +917,7 @@ export default function RightChatPanel() {
                         )}>
                         <div
                             className={clsx(
-                                "py-2 px-3.5 rounded-xl shadow-sm text-[14.5px] leading-snug border whitespace-pre-wrap font-medium",
+                                "py-2 px-3.5 rounded-xl shadow-sm text-[13.5px] leading-snug border whitespace-pre-wrap font-medium",
                                 msg.sender === "user"
                                     ? "bg-[#1e3a5f] text-white border-[#1e3a5f]/10 rounded-tr-none shadow-lg"
                                     : "bg-white text-slate-700 border-slate-200 rounded-tl-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
@@ -750,11 +945,18 @@ export default function RightChatPanel() {
                                                 } else if (action.value === "sample") {
                                                     localStorage.setItem("max_guide_step", "add_customer");
                                                     router.push("/corporate-customers");
+                                                } else if (action.value === "sample_claim") {
+                                                    localStorage.setItem("max_guide_step", "claim_insurance");
+                                                    router.push("/claims");
+                                                } else if (action.value === "real_claim") {
+                                                    router.push("/claims");
+                                                } else if (action.value === "navigate_claims") {
+                                                    router.push("/claims");
                                                 } else {
                                                     handleSend(action.label);
                                                 }
                                             }}
-                                            className='w-full py-2.5 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[12.5px] font-bold text-[#1e3a5f] hover:bg-blue-50 hover:border-blue-300 transition-all text-left flex items-center justify-between group shadow-sm'>
+                                            className='w-full py-2.5 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[11.5px] font-bold text-[#1e3a5f] hover:bg-blue-50 hover:border-blue-300 transition-all text-left flex items-center justify-between group shadow-sm'>
                                             {action.label}
                                             <div className='w-5.5 h-5.5 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm'>
                                                 →
@@ -808,7 +1010,7 @@ export default function RightChatPanel() {
 
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        className='flex-1 bg-transparent text-gray-800 text-[14px] outline-none py-2 px-1 placeholder:text-gray-400 font-medium'
+                        className='flex-1 bg-transparent text-gray-800 text-[13px] outline-none py-2 px-1 placeholder:text-gray-400 font-medium'
                     />
                     <button
                         type='submit'

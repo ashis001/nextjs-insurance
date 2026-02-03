@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Corporate } from "@/lib/types";
 import { useCorporateEngine } from "./useCorporateEngine";
-import { Loader2, UploadCloud, Send } from "lucide-react";
+import { Loader2, UploadCloud, MousePointer2 } from "lucide-react";
 import { speakText } from "@/lib/google-tts";
 import { useEffect, useState, useRef } from "react";
 import clsx from "clsx";
@@ -129,7 +129,12 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     const emailValue = watch("contacts.0.email");
     const roleValue = watch("contacts.0.role");
 
-    const { openChat, isMuted } = useChat();
+    const { openChat, isMuted, isWorkflowPaused, setIsWorkflowActive } = useChat();
+    const isWorkflowPausedRef = useRef(isWorkflowPaused);
+
+    useEffect(() => {
+        isWorkflowPausedRef.current = isWorkflowPaused;
+    }, [isWorkflowPaused]);
     const [activeFillingField, setActiveFillingField] = useState<string | null>(null);
     const [isSubmittingHighlighted, setIsSubmittingHighlighted] = useState(false);
     const [countdown, setCountdown] = useState<number | null>(null);
@@ -216,21 +221,35 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
 
         if (guideStep === "add_customer") {
             const runGuide = async () => {
+                setIsWorkflowActive(true);
                 // Helper for natural delay
-                const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+                const delay = async (ms: number) => {
+                    await new Promise(resolve => setTimeout(resolve, ms));
+                    while (isWorkflowPausedRef.current) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                };
 
                 // 1. Auto-fill data sequentially (Simulating user input)
                 const fillField = async (field: any, value: any, isLast: boolean = false) => {
                     if (value !== undefined && value !== null) {
                         const el = document.getElementById(field) as HTMLElement | null;
                         if (el) {
-                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            // Wait for scroll to stabilize
-                            await delay(400);
+                            const rect = el.getBoundingClientRect();
+                            // Only auto-scroll if the element is BELOW the viewport (moving forward)
+                            // If the user has scrolled UP and the element is now below, or if it's off-screen above,
+                            // we check if it's above or below.
+                            const isBelow = rect.top > window.innerHeight;
+                            
+                            if (isBelow) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                // Wait for scroll to stabilize
+                                await delay(400);
+                            }
                         }
 
                         setActiveFillingField(field);
-                        if (el) el.focus();
+                        if (el) el.focus({ preventScroll: true });
 
                         // Professional Voice-Over - AWAIT completion
                         await speakText(VOICE_MESSAGES[field]);
@@ -348,7 +367,12 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     setActiveFillingField("contacts.0.role");
                     
                     const el = document.getElementById("contacts.0.role");
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (el) {
+                        const rect = el.getBoundingClientRect();
+                        if (rect.top > window.innerHeight) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
                 };
                 moveToRole();
             }
@@ -366,6 +390,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                 setIsSubmittingHighlighted(true);
                 let count = 5; // Shorter countdown for better UX
                 setCountdown(count);
+                setIsWorkflowActive(false);
 
                 timerRef.current = setInterval(() => {
                     count -= 1;
@@ -906,33 +931,35 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                         : "Save & Next →"}
                 </button>
             </div>
-            {/* Red Floating Indicator (Follows pointerPos state) */}
+            {/* Refined Arrow Pointer Indicator (Follows pointerPos state) */}
             {activeFillingField && pointerPos && (
                 <div
                     className="absolute z-[10000] pointer-events-none transition-all duration-500 ease-in-out"
                     style={{
                         left: pointerPos.left,
-                        top: pointerPos.top - 15, // Sit exactly 15px above the element top
+                        top: pointerPos.top - 10,
                         transform: 'translate(-50%, -100%)'
                     }}
                 >
-                    <div className="relative animate-nina-guide-bounce-gentle">
-                        <div className="bg-red-500 p-2.5 rounded-full shadow-[0_15px_40px_rgba(239,68,68,0.6)] border-2 border-white transform rotate-[105deg]">
-                            <Send className="w-5 h-5 text-white fill-white" />
+                    <div className="relative flex flex-col items-center animate-nina-pointer-float">
+                        {/* The Sharp Pointer Icon - Rotated to point directly down */}
+                        <div className="text-red-500 filter drop-shadow-[0_4px_12px_rgba(239,68,68,0.4)] transform rotate-[225deg]">
+                            <MousePointer2 className="w-8 h-8 fill-red-500" />
                         </div>
-                        {/* More intense pulse for visibility */}
-                        <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-50 scale-[1.7]" />
+                        
+                        {/* Smooth Pulse Animation (Restored to centered halo) */}
+                        <div className="absolute inset-0 -m-2 rounded-full bg-red-500 animate-ping opacity-20 scale-[1.5]" />
                     </div>
                 </div>
             )}
 
             <style jsx global>{`
-                @keyframes nina-guide-bounce-gentle {
+                @keyframes nina-pointer-float {
                   0%, 100% { transform: translateY(0); }
-                  50% { transform: translateY(-4px); }
+                  50% { transform: translateY(-8px); }
                 }
-                .animate-nina-guide-bounce-gentle {
-                  animation: nina-guide-bounce-gentle 1.5s ease-in-out infinite;
+                .animate-nina-pointer-float {
+                  animation: nina-pointer-float 1.5s ease-in-out infinite;
                 }
             `}</style>
         </form>

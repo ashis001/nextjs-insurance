@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Send } from "lucide-react";
+import { MousePointer2 } from "lucide-react";
 
 interface MaxGuidePointerProps {
   text: string;
@@ -30,14 +30,15 @@ export default function MaxGuidePointer({ text, targetUrl }: MaxGuidePointerProp
       onClick={handleManualClick}
       className="absolute top-full left-1/2 -translate-x-1/2 mt-1 z-[99999] cursor-pointer flex flex-col items-center group select-none"
     >
-      {/* Red Pulse Indicator */}
-      <div className="relative z-[100000] animate-max-guide-bounce-gentle">
-        <div className="bg-red-500 p-2 rounded-full shadow-[0_4px_10px_rgba(239,68,68,0.3)] border-2 border-white transform -rotate-[15deg] group-hover:scale-110 transition-all duration-300">
-          <Send className="w-3.5 h-3.5 text-white fill-white translate-x-[0.5px] -translate-y-[0.5px]" />
+      {/* Refined Arrow Pointer Indicator */}
+      <div className="relative z-[100000] flex flex-col items-center animate-max-guide-bounce-gentle">
+        {/* Rotated to point UP towards the button since it sits below it */}
+        <div className="text-red-500 filter drop-shadow-[0_4px_12px_rgba(239,68,68,0.4)] transform rotate-[45deg] group-hover:scale-110 transition-all duration-300">
+          <MousePointer2 className="w-7 h-7 fill-red-500" />
         </div>
 
-        {/* Subtle Pulse */}
-        <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-20 scale-150" />
+        {/* Smooth Pulse Animation (Halo) */}
+        <div className="absolute inset-0 -m-1 rounded-full bg-red-500 animate-ping opacity-20 scale-[1.5]" />
       </div>
 
       <style jsx>{`
