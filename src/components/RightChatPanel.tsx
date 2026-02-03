@@ -607,7 +607,7 @@ export default function RightChatPanel() {
             // --- KNOWLEDGE BASE LOGIC (Analyzing Project Workflows) ---
             const isOnboardingQuery =
                 query.includes("onboard") ||
-                ((query.includes("add") || query.includes("create") || query.includes("how to")) && (query.includes("customer") || query.includes("corporate")));
+                ((query.includes("add") || query.includes("create") || query.includes("how to") || query.includes("new")) && (query.includes("customer") || query.includes("corporate") || query.includes("organization")));
 
             const isClaimQuery =
                 query.includes("claim") &&
