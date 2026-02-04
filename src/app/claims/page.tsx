@@ -31,12 +31,14 @@ const INSURANCE_TYPES = [
 ];
 
 export default function ClaimsPage() {
-    const { toggleChat, openChat, isWorkflowPaused, setIsWorkflowActive } = useChat();
+    const { toggleChat, openChat, isWorkflowPaused, isWorkflowActive, setIsWorkflowActive } = useChat();
     const isWorkflowPausedRef = useRef(isWorkflowPaused);
+    const isWorkflowActiveRef = useRef(isWorkflowActive);
 
     useEffect(() => {
         isWorkflowPausedRef.current = isWorkflowPaused;
-    }, [isWorkflowPaused]);
+        isWorkflowActiveRef.current = isWorkflowActive;
+    }, [isWorkflowPaused, isWorkflowActive]);
 
     const [step, setStep] = useState(1);
     const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -62,67 +64,84 @@ export default function ClaimsPage() {
         const guideStep = localStorage.getItem("max_guide_step");
         if (guideStep === "claim_insurance") {
             const runGuide = async () => {
-                setIsWorkflowActive(true);
-                const delay = async (ms: number) => {
-                    await new Promise(resolve => setTimeout(resolve, ms));
-                    while (isWorkflowPausedRef.current) {
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-                };
-                await delay(1000);
-
-                // Step 1: Select Category
-                const targetId = "category-health";
-                const el = document.getElementById(targetId);
-                if (el) {
-                    setActiveFillingField(targetId);
-                    await speakText("To start your claim, first select a medical category. Let's choose Medical Health.");
-                    await delay(1500);
-                    setSelectedType('health');
-                    setStep(2);
-                    setActiveFillingField(null);
-                }
-
-                await delay(1000);
-
-                // Step 2: Fill Form
-                const fillField = async (id: string, value: string, text: string) => {
-                    setActiveFillingField(id);
-                    const input = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement;
-                    if (input) {
-                        const rect = input.getBoundingClientRect();
-                        if (rect.top > window.innerHeight) {
-                            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            await delay(400);
+                try {
+                    setIsWorkflowActive(true);
+                    isWorkflowActiveRef.current = true; // Sync ref immediately
+                    const delay = async (ms: number) => {
+                        if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                        await new Promise(resolve => setTimeout(resolve, ms));
+                        while (isWorkflowPausedRef.current) {
+                            if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                            await new Promise(resolve => setTimeout(resolve, 100));
                         }
-                        input.focus({ preventScroll: true });
-                        await speakText(text);
-                        await delay(500);
-                        let current = "";
-                        for (const char of value) {
-                            current += char;
-                            setFormData(prev => ({ ...prev, [id]: current }));
-                            await delay(30 + Math.random() * 20);
-                        }
-                        await delay(500);
+                        if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                    };
+                    await delay(1000);
+
+                    // Step 1: Select Category
+                    const targetId = "category-health";
+                    const el = document.getElementById(targetId);
+                    if (el) {
+                        setActiveFillingField(targetId);
+                        await speakText("To start your claim, first select a medical category. Let's choose Medical Health.");
+                        await delay(1500);
+                        if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                        setSelectedType('health');
+                        setStep(2);
+                        setActiveFillingField(null);
                     }
-                };
 
-                await fillField("provider", "City General Hospital", "Enter the name of your medical provider.");
-                await fillField("date", "2026-02-01", "Select the date of service from your invoice.");
-                await fillField("amount", "245.50", "Enter the total claim amount.");
-                await fillField("diagnosis", "Regular checkup and flu vaccination.", "Briefly describe the reason for your visit.");
+                    await delay(1000);
 
-                const nextBtn = document.getElementById("next-step-btn");
-                if (nextBtn) {
-                    setActiveFillingField("next-step-btn");
-                    await speakText("Great! I've prepared the details. Now click the 'Continue to Uploads' button to proceed.");
+                    // Step 2: Fill Form
+                    const fillField = async (id: string, value: string, text: string) => {
+                        if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                        setActiveFillingField(id);
+                        const input = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement;
+                        if (input) {
+                            const rect = input.getBoundingClientRect();
+                            if (rect.top > window.innerHeight) {
+                                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                await delay(400);
+                            }
+                            input.focus({ preventScroll: true });
+                            await speakText(text);
+                            await delay(500);
+                            let current = "";
+                            for (const char of value) {
+                                if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                                current += char;
+                                setFormData(prev => ({ ...prev, [id]: current }));
+                                await delay(30 + Math.random() * 20);
+                            }
+                            await delay(500);
+                        }
+                    };
+
+                    await fillField("provider", "City General Hospital", "Enter the name of your medical provider.");
+                    await fillField("date", "2026-02-01", "Select the date of service from your invoice.");
+                    await fillField("amount", "245.50", "Enter the total claim amount.");
+                    await fillField("diagnosis", "Regular checkup and flu vaccination.", "Briefly describe the reason for your visit.");
+
+                    const nextBtn = document.getElementById("next-step-btn");
+                    if (nextBtn) {
+                        setActiveFillingField("next-step-btn");
+                        await speakText("Great! I've prepared the details. Now click the 'Continue to Uploads' button to proceed.");
+                    }
+
+                    await delay(1000);
+                    // Final Step 3 Message
+                    openChat("I've prepared the claim details for you. Simply upload your receipt here and click Review to finish!");
+                    setIsWorkflowActive(false);
+                } catch (e: any) {
+                    if (e.message === "WorkflowCancelled") {
+                        console.log("Workflow cancelled");
+                        setActiveFillingField(null);
+                        // cleanup
+                    } else {
+                        console.error(e);
+                    }
                 }
-
-                await delay(1000);
-                // Final Step 3 Message
-                openChat("I've prepared the claim details for you. Simply upload your receipt here and click Review to finish!");
-                setIsWorkflowActive(false);
                 localStorage.removeItem("max_guide_step");
             };
             runGuide();

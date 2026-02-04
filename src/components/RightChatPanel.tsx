@@ -1007,7 +1007,7 @@ export default function RightChatPanel() {
 
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        className='flex-1 bg-transparent text-gray-900 text-[13px] outline-none py-2 px-1 placeholder:text-gray-400 font-medium'
+                        className='flex-1 min-w-0 bg-transparent text-gray-900 text-[13px] outline-none py-2 px-1 placeholder:text-gray-400 font-medium'
                     />
                     <button
                         type='submit'

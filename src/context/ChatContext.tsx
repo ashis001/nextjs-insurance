@@ -74,8 +74,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         stopSpeech();
         setIsOpen(false);
         setIsFloating(false); // Always reset to sidebar mode on close
-        // We keep the mute state as is when closing, 
-        // but it will reset on next open as per openChat logic
+
+        // Ensure workflow is terminated when chat is closed
+        setIsWorkflowActive(false);
+        setIsWorkflowPaused(false);
     }, []);
 
     const clearExternalMessage = useCallback(() => setExternalMessage(null), []);
