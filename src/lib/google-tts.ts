@@ -5,8 +5,10 @@
  * It uses the API key stored in the NEXT_PUBLIC_GOOGLE_TTS_API_KEY environment variable.
  */
 
-const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_TTS_API_KEY;
-const API_URL = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${API_KEY}`;
+const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_TTS_API_KEY;
+const ELEVENLABS_API_KEY = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
+const ELEVENLABS_VOICE_ID = process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID || 'AXdMgz6evoL7OPd7eU12';
+const ELEVENLABS_MODEL = process.env.NEXT_PUBLIC_ELEVENLABS_MODEL || 'eleven_turbo_v2_5';
 
 export interface TTSOptions {
     languageCode?: string;
@@ -37,45 +39,79 @@ function stripMarkdown(text: string): string {
  * @param options Voice options
  */
 export async function synthesizeSpeech(text: string, options: TTSOptions = {}): Promise<string> {
-    if (!API_KEY) {
-        throw new Error('Google TTS API Key is not configured in .env.local');
-    }
-
     const cleanedText = stripMarkdown(text);
-    const payload = {
-        input: { text: cleanedText },
-        voice: {
-            languageCode: options.languageCode || 'en-US',
-            name: options.name || 'en-US-Standard-C',
-            ssmlGender: options.ssmlGender || 'FEMALE',
-        },
-        audioConfig: {
-            audioEncoding: options.audioEncoding || 'MP3',
-            speakingRate: options.speakingRate || 1.0,
-            pitch: options.pitch || 0,
-        },
-    };
 
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
+    // 1. Try Google TTS first if API key is available
+    if (GOOGLE_API_KEY) {
+        const GOOGLE_API_URL = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_API_KEY}`;
+
+        const payload = {
+            input: { text: cleanedText },
+            voice: {
+                languageCode: options.languageCode || 'en-US',
+                name: options.name || 'en-US-Standard-C',
+                ssmlGender: options.ssmlGender || 'FEMALE',
             },
-            body: JSON.stringify(payload),
-        });
+            audioConfig: {
+                audioEncoding: options.audioEncoding || 'MP3',
+                speakingRate: options.speakingRate || 1.0,
+                pitch: options.pitch || 0,
+            },
+        };
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Google TTS API Error: ${errorData.error?.message || response.statusText}`);
+        try {
+            const response = await fetch(GOOGLE_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.audioContent; // Base64 string
+            }
+            console.warn('Google TTS failed, trying ElevenLabs fallback...');
+        } catch (error) {
+            console.error('Google TTS error:', error);
         }
-
-        const data = await response.json();
-        return data.audioContent; // This is a base64 encoded string
-    } catch (error) {
-        console.error('Error in synthesizeSpeech:', error);
-        throw error;
     }
+
+    // 2. Try ElevenLabs if Google is unavailable or failed
+    if (ELEVENLABS_API_KEY) {
+        try {
+            const voiceId = options.name || ELEVENLABS_VOICE_ID;
+            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'xi-api-key': ELEVENLABS_API_KEY,
+                },
+                body: JSON.stringify({
+                    text: cleanedText,
+                    model_id: ELEVENLABS_MODEL,
+                    voice_settings: {
+                        stability: 0.5,
+                        similarity_boost: 0.75,
+                    },
+                }),
+            });
+
+            if (response.ok) {
+                const arrayBuffer = await response.arrayBuffer();
+                const base64 = btoa(
+                    new Uint8Array(arrayBuffer)
+                        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+                );
+                return base64;
+            }
+            const errorText = await response.text();
+            console.error('ElevenLabs API Error:', errorText);
+        } catch (error) {
+            console.error('ElevenLabs failed:', error);
+        }
+    }
+
+    throw new Error('No TTS provider available. Please check your .env.local file.');
 }
 
 // Global variables to keep track of the current audio and its resolve function
