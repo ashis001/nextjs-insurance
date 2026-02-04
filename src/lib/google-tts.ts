@@ -8,7 +8,7 @@
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_TTS_API_KEY;
 const ELEVENLABS_API_KEY = process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
 const ELEVENLABS_VOICE_ID = process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID || 'AXdMgz6evoL7OPd7eU12';
-const ELEVENLABS_MODEL = process.env.NEXT_PUBLIC_ELEVENLABS_MODEL || 'eleven_turbo_v2_5';
+const ELEVENLABS_MODEL = process.env.NEXT_PUBLIC_ELEVENLABS_MODEL || 'eleven_multilingual_v2';
 
 export interface TTSOptions {
     languageCode?: string;
@@ -38,7 +38,7 @@ function stripMarkdown(text: string): string {
  * @param text The text to synthesize
  * @param options Voice options
  */
-export async function synthesizeSpeech(text: string, options: TTSOptions = {}): Promise<string> {
+export async function synthesizeSpeech(text: string, options: TTSOptions = {}): Promise<{ audioContent: string, isElevenLabs: boolean }> {
     const cleanedText = stripMarkdown(text);
 
     // 1. Try Google TTS first if API key is available
@@ -54,7 +54,7 @@ export async function synthesizeSpeech(text: string, options: TTSOptions = {}): 
             },
             audioConfig: {
                 audioEncoding: options.audioEncoding || 'MP3',
-                speakingRate: options.speakingRate || 1.0,
+                speakingRate: options.speakingRate || 0.92,
                 pitch: options.pitch || 0,
             },
         };
@@ -68,7 +68,7 @@ export async function synthesizeSpeech(text: string, options: TTSOptions = {}): 
 
             if (response.ok) {
                 const data = await response.json();
-                return data.audioContent; // Base64 string
+                return { audioContent: data.audioContent, isElevenLabs: false }; // Base64 string
             }
             console.warn('Google TTS failed, trying ElevenLabs fallback...');
         } catch (error) {
@@ -90,8 +90,10 @@ export async function synthesizeSpeech(text: string, options: TTSOptions = {}): 
                     text: cleanedText,
                     model_id: ELEVENLABS_MODEL,
                     voice_settings: {
-                        stability: 0.5,
+                        stability: 0.75,
                         similarity_boost: 0.75,
+                        style: 0.06,
+                        use_speaker_boost: true
                     },
                 }),
             });
@@ -102,7 +104,7 @@ export async function synthesizeSpeech(text: string, options: TTSOptions = {}): 
                     new Uint8Array(arrayBuffer)
                         .reduce((data, byte) => data + String.fromCharCode(byte), '')
                 );
-                return base64;
+                return { audioContent: base64, isElevenLabs: true };
             }
             const errorText = await response.text();
             console.error('ElevenLabs API Error:', errorText);
@@ -133,8 +135,9 @@ export function setGlobalMuteState(muted: boolean): void {
 /**
  * Plays the synthesized speech using the browser's Audio object.
  * @param audioContent Base64 encoded audio content
+ * @param playbackRate Optional playback rate (default 1.0)
  */
-export function playAudio(audioContent: string): Promise<void> {
+export function playAudio(audioContent: string, playbackRate: number = 1.0): Promise<void> {
     // If we are currently muted, don't play anything
     if (globalAudioMuted) {
         return Promise.resolve();
@@ -149,6 +152,8 @@ export function playAudio(audioContent: string): Promise<void> {
             if (globalAudioMuted) return resolve();
 
             const audio = new Audio(`data:audio/mp3;base64,${audioContent}`);
+            audio.playbackRate = playbackRate; // Apply speed control
+
             currentAudio = audio;
             resolveCurrentAudio = resolve;
 
@@ -201,12 +206,16 @@ export async function speakText(text: string, options: TTSOptions = {}): Promise
     if (globalAudioMuted) return;
 
     try {
-        const audioContent = await synthesizeSpeech(text, options);
+        const { audioContent, isElevenLabs } = await synthesizeSpeech(text, options);
 
         // Critical check after synthesis delay
         if (globalAudioMuted) return;
 
-        await playAudio(audioContent);
+        // If it's ElevenLabs, we apply the speaking rate manually via playbackRate
+        // If it's Google, the rate is already baked into the audio file
+        const rate = isElevenLabs ? (options.speakingRate || 0.92) : 1.0;
+
+        await playAudio(audioContent, rate);
     } catch (error) {
         console.error('Failed to speak text:', error);
     }

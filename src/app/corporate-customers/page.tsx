@@ -46,8 +46,8 @@ export default function CorporateListingPage() {
         if (guideStep === "add_customer") {
             const timer = setTimeout(() => {
                 setActiveGuide("add_customer");
-                // Handled by RightChatPanel sequence now to prevent duplicate speech
-                // openChat("Let’s start by creating the company profile.");
+                // Final instruction on listing page
+                openChat("Now, please click on the 'Add New Customer' button in the top right corner.");
             }, 800);
             return () => clearTimeout(timer);
         }

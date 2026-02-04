@@ -932,10 +932,8 @@ export default function RightChatPanel() {
                                                             setGuideTargetRect(null);
                                                             await streamMessage("Let’s start by creating the company profile.", "assistant");
 
-                                                            setTimeout(() => {
-                                                                localStorage.setItem("max_guide_step", "add_customer");
-                                                                router.push("/corporate-customers");
-                                                            }, 1500);
+                                                            localStorage.setItem("max_guide_step", "add_customer");
+                                                            router.push("/corporate-customers");
                                                         }, 4000);
                                                     } else {
                                                         // Fallback
