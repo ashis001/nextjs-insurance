@@ -13,10 +13,10 @@ export default function MaxGuidePointer({ text, targetUrl }: MaxGuidePointerProp
   const router = useRouter();
 
   useEffect(() => {
-    // Auto-navigate after 10 seconds
+    // Auto-navigate after 6 seconds (allowing Nina to finish speaking the final instruction)
     const timer = setTimeout(() => {
       router.push(targetUrl);
-    }, 10000);
+    }, 6000);
 
     return () => clearTimeout(timer);
   }, [targetUrl, router]);

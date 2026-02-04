@@ -361,6 +361,16 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     await new Promise(resolve => setTimeout(resolve, 500));
                     setActiveFillingField("submit-button");
                     await speakText(finalMsg);
+
+                    // Professional Auto-save and Navigate after 5 seconds
+                    const autoSubmitTimer = setTimeout(() => {
+                        if (isWorkflowActiveRef.current || !isWorkflowActiveRef.current) { // Trigger even if workflow just finished
+                             handleSubmit(onSubmit)();
+                        }
+                    }, 5000);
+
+                    // Add to cleanup or tracking if needed
+                    return () => clearTimeout(autoSubmitTimer);
                 } catch (e: any) {
                     if (e.message === "WorkflowCancelled") {
                         console.log("Workflow cancelled");
