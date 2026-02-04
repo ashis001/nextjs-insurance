@@ -188,30 +188,30 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     }, [activeFillingField]);
 
     const VOICE_MESSAGES: Record<string, string> = {
-        "broker": "Please select the correct broker to manage your account effectively.",
-        "selectProfile": "Choosing the right insurance type is critical to ensure proper coverage for your group.",
-        "paymentPlatform": "We'll configure your preferred payment gateway for secure and seamless transactions.",
-        "name": "Let's capture the correct legal name of your corporation.",
-        "provincialOffices": "Indicating your primary office location allows us to apply regional benefit standards.",
-        "policyStartDate": "The policy start date determines exactly when your benefits and coverage will go live.",
-        "contactEmail": "A valid email is vital for all future policy updates and certificates.",
-        "address.street1": "Please type your address.",
-        "address.unit": "Please include any suite or unit numbers.",
-        "address.city": "Please type your city.",
-        "address.province": "Please select your province.",
-        "address.country": "Please select your country.",
-        "address.postalCode": "Finally, enter your postal code to complete the address.",
-        "contacts.0.firstName": "Please enter the first name of your primary contact.",
-        "contacts.0.lastName": "Please enter the last name.",
-        "contacts.0.phone": "Please enter a valid phone number.",
-        "contacts.0.email": "The HR contact email is essential for administrative communications.",
-        "contacts.0.role": "Assigning the correct role ensures proper access permissions.",
-        "waitingPeriodInitial": "Please select the waiting period for initial enrollment.",
-        "waitingPeriodNewHires": "Please specify the waiting period for new hires.",
-        "defineCoverageTiers": "Choose whether you want to define specific coverage tiers.",
-        "paymentMethod": "Please select your preferred payment method.",
-        "showEmployerName": "Would you like to display the employer name on member portals?",
-        "employeeCount": "Please enter the approximate number of employees."
+        "broker": "Select the designated broker to ensure correct commission and account management.",
+        "selectProfile": "Select the insurance profile that best matches your group's coverage requirements.",
+        "paymentPlatform": "Specify the preferred payment platform for secure transaction processing.",
+        "name": "Enter the corporation's official legal name for all policy documentation.",
+        "provincialOffices": "Identify the primary office location to ensure alignment with regional benefit standards.",
+        "policyStartDate": "Set the policy effective date. Accuracy is vital as this determines when coverage officially begins.",
+        "contactEmail": "Provide a valid administrative email for essential updates and certificates.",
+        "address.street1": "Enter the primary street address for the corporate office.",
+        "address.unit": "Include suite or unit numbers where applicable.",
+        "address.city": "Please specify the city.",
+        "address.province": "Select the appropriate province or territory.",
+        "address.country": "Select the country of registration.",
+        "address.postalCode": "Provide the postal code to finalize the address registration.",
+        "contacts.0.firstName": "Enter the first name of the primary administrative contact.",
+        "contacts.0.lastName": "Enter the last name of the primary contact.",
+        "contacts.0.phone": "Provide a direct telephone number for the primary contact.",
+        "contacts.0.email": "The primary contact's email is required for all administrative correspondence.",
+        "contacts.0.role": "Assign the appropriate role to ensure correct system permissions and access.",
+        "waitingPeriodInitial": "Define the required waiting period for initial member enrollment.",
+        "waitingPeriodNewHires": "Specify the standard waiting period applicable to all future new hires.",
+        "defineCoverageTiers": "Indicate if you wish to implement customized coverage tiers for this plan.",
+        "paymentMethod": "Select the organization's preferred billing method.",
+        "showEmployerName": "Determine if the employer's name should be visible on the member enrollment portal.",
+        "employeeCount": "Provide the estimated total employee count for accurate plan administration."
     };
 
     useEffect(() => {
@@ -365,7 +365,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     // Professional Auto-save and Navigate after 5 seconds
                     const autoSubmitTimer = setTimeout(() => {
                         if (isWorkflowActiveRef.current || !isWorkflowActiveRef.current) { // Trigger even if workflow just finished
-                             handleSubmit(onSubmit)();
+                            handleSubmit(onSubmit)();
                         }
                     }, 5000);
 
