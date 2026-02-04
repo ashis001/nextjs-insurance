@@ -129,12 +129,14 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
     const emailValue = watch("contacts.0.email");
     const roleValue = watch("contacts.0.role");
 
-    const { openChat, isMuted, isWorkflowPaused, setIsWorkflowActive } = useChat();
+    const { openChat, isMuted, isWorkflowPaused, isWorkflowActive, setIsWorkflowActive } = useChat();
     const isWorkflowPausedRef = useRef(isWorkflowPaused);
+    const isWorkflowActiveRef = useRef(isWorkflowActive);
 
     useEffect(() => {
         isWorkflowPausedRef.current = isWorkflowPaused;
-    }, [isWorkflowPaused]);
+        isWorkflowActiveRef.current = isWorkflowActive;
+    }, [isWorkflowPaused, isWorkflowActive]);
     const [activeFillingField, setActiveFillingField] = useState<string | null>(null);
     const [isSubmittingHighlighted, setIsSubmittingHighlighted] = useState(false);
     const [countdown, setCountdown] = useState<number | null>(null);
@@ -223,134 +225,154 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
 
         if (guideStep === "add_customer") {
             const runGuide = async () => {
-                setIsWorkflowActive(true);
-                // Helper for natural delay
-                const delay = async (ms: number) => {
-                    await new Promise(resolve => setTimeout(resolve, ms));
-                    while (isWorkflowPausedRef.current) {
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-                };
+                try {
+                    setIsWorkflowActive(true);
+                    isWorkflowActiveRef.current = true; // Sync ref immediately to prevent race condition
+                    // Helper for natural delay
+                    const delay = async (ms: number) => {
+                        if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                        await new Promise(resolve => setTimeout(resolve, ms));
+                        while (isWorkflowPausedRef.current) {
+                            if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                        if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                    };
 
-                // 1. Auto-fill data sequentially (Simulating user input)
-                const fillField = async (field: any, value: any, isLast: boolean = false) => {
-                    if (value !== undefined && value !== null) {
-                        const el = document.getElementById(field) as HTMLElement | null;
-                        if (el) {
-                            const rect = el.getBoundingClientRect();
-                            // Only auto-scroll if the element is BELOW the viewport (moving forward)
-                            // If the user has scrolled UP and the element is now below, or if it's off-screen above,
-                            // we check if it's above or below.
-                            const isBelow = rect.top > window.innerHeight;
+                    // 1. Auto-fill data sequentially (Simulating user input)
+                    const fillField = async (field: any, value: any, isLast: boolean = false) => {
+                        if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
 
-                            if (isBelow) {
-                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                // Wait for scroll to stabilize
+                        if (value !== undefined && value !== null) {
+                            const el = document.getElementById(field) as HTMLElement | null;
+                            if (el) {
+                                const rect = el.getBoundingClientRect();
+                                // Only auto-scroll if the element is BELOW the viewport (moving forward)
+                                // If the user has scrolled UP and the element is now below, or if it's off-screen above,
+                                // we check if it's above or below.
+                                const isBelow = rect.top > window.innerHeight;
+
+                                if (isBelow) {
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    // Wait for scroll to stabilize
+                                    await delay(400);
+                                }
+                            }
+
+                            setActiveFillingField(field);
+                            if (el) el.focus({ preventScroll: true });
+
+                            // Professional Voice-Over - AWAIT completion
+                            await speakText(VOICE_MESSAGES[field]);
+
+                            // Wait a moment for visual focus to sink in before typing/selecting
+                            await delay(200);
+
+                            // If it's a dropdown or radio, simulate selection pause
+                            const isSelect = el?.tagName === 'SELECT';
+                            const isRadio = field.includes('waitingPeriod') || field.includes('defineCoverage') || field.includes('paymentMethod') || field.includes('showEmployer');
+
+                            if (isSelect) {
+                                const selectEl = el as HTMLSelectElement;
+                                await delay(400);
+                                setValue(field, value);
+                                await delay(600);
+                            } else if (isRadio) {
+                                await delay(400);
+                                setValue(field, value);
+                                await delay(600);
+                            } else {
+                                // Realistic character-by-character typing
+                                await delay(200);
+                                const textValue = String(value);
+                                let currentText = "";
+                                for (let i = 0; i < textValue.length; i++) {
+                                    if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                                    currentText += textValue[i];
+                                    setValue(field, currentText);
+                                    await delay(Math.random() * 25 + 15);
+                                }
                                 await delay(400);
                             }
-                        }
 
-                        setActiveFillingField(field);
-                        if (el) el.focus({ preventScroll: true });
-
-                        // Professional Voice-Over - AWAIT completion
-                        await speakText(VOICE_MESSAGES[field]);
-
-                        // Wait a moment for visual focus to sink in before typing/selecting
-                        await delay(200);
-
-                        // If it's a dropdown or radio, simulate selection pause
-                        const isSelect = el?.tagName === 'SELECT';
-                        const isRadio = field.includes('waitingPeriod') || field.includes('defineCoverage') || field.includes('paymentMethod') || field.includes('showEmployer');
-
-                        if (isSelect) {
-                            const selectEl = el as HTMLSelectElement;
-                            await delay(400);
-                            setValue(field, value);
-                            await delay(600);
-                        } else if (isRadio) {
-                            await delay(400);
-                            setValue(field, value);
-                            await delay(600);
-                        } else {
-                            // Realistic character-by-character typing
-                            await delay(200);
-                            const textValue = String(value);
-                            let currentText = "";
-                            for (let i = 0; i < textValue.length; i++) {
-                                currentText += textValue[i];
-                                setValue(field, currentText);
-                                await delay(Math.random() * 25 + 15);
+                            // Clear only if it's the last field, otherwise keep for smooth transition
+                            if (isLast) {
+                                setActiveFillingField(null);
+                                if (el) el.blur();
                             }
-                            await delay(400);
                         }
+                    };
 
-                        // Clear only if it's the last field, otherwise keep for smooth transition
-                        if (isLast) {
-                            setActiveFillingField(null);
-                            if (el) el.blur();
-                        }
-                    }
-                };
+                    await delay(500);
+                    await fillField("broker", SAMPLE_CORPORATE_1.broker);
+                    await fillField("selectProfile", SAMPLE_CORPORATE_1.selectProfile);
+                    await fillField("paymentPlatform", SAMPLE_CORPORATE_1.paymentPlatform);
 
-                await delay(500);
-                await fillField("broker", SAMPLE_CORPORATE_1.broker);
-                await fillField("selectProfile", SAMPLE_CORPORATE_1.selectProfile);
-                await fillField("paymentPlatform", SAMPLE_CORPORATE_1.paymentPlatform);
-
-                await delay(300);
-                await fillField("name", SAMPLE_CORPORATE_1.name || "TechFlow Solutions Inc.");
-                await fillField("provincialOffices", SAMPLE_CORPORATE_1.provincialOffices);
-
-                await delay(300);
-                if (SAMPLE_CORPORATE_1.policyStartDate) {
-                    await fillField("policyStartDate", new Date(SAMPLE_CORPORATE_1.policyStartDate).toISOString().split('T')[0]);
-                }
-                await fillField("contactEmail", SAMPLE_CORPORATE_1.contactEmail);
-
-                await delay(300);
-                if (SAMPLE_CORPORATE_1.address) {
-                    await fillField("address.street1", SAMPLE_CORPORATE_1.address.street1);
-                    if (SAMPLE_CORPORATE_1.address.unit) await fillField("address.unit", SAMPLE_CORPORATE_1.address.unit);
-
-                    await fillField("address.city", SAMPLE_CORPORATE_1.address.city);
-                    await fillField("address.country", SAMPLE_CORPORATE_1.address.country);
-                    await fillField("address.province", SAMPLE_CORPORATE_1.address.province);
-                    await fillField("address.postalCode", SAMPLE_CORPORATE_1.address.postalCode);
-                }
-
-                await delay(300);
-                if (SAMPLE_CORPORATE_1.contacts && SAMPLE_CORPORATE_1.contacts.length > 0) {
-                    const contact = SAMPLE_CORPORATE_1.contacts[0];
-                    await fillField("contacts.0.firstName", contact.firstName);
-                    await fillField("contacts.0.lastName", contact.lastName);
-                    await fillField("contacts.0.phone", contact.phone);
-                    // Added email autofill as per request
-                    await fillField("contacts.0.email", contact.email);
-
-                    // Autofill Role (Moved before Enrollment policies)
                     await delay(300);
-                    await fillField("contacts.0.role", "HR Admin Access");
+                    await fillField("name", SAMPLE_CORPORATE_1.name || "TechFlow Solutions Inc.");
+                    await fillField("provincialOffices", SAMPLE_CORPORATE_1.provincialOffices);
+
+                    await delay(300);
+                    if (SAMPLE_CORPORATE_1.policyStartDate) {
+                        await fillField("policyStartDate", new Date(SAMPLE_CORPORATE_1.policyStartDate).toISOString().split('T')[0]);
+                    }
+                    await fillField("contactEmail", SAMPLE_CORPORATE_1.contactEmail);
+
+                    await delay(300);
+                    if (SAMPLE_CORPORATE_1.address) {
+                        await fillField("address.street1", SAMPLE_CORPORATE_1.address.street1);
+                        if (SAMPLE_CORPORATE_1.address.unit) await fillField("address.unit", SAMPLE_CORPORATE_1.address.unit);
+
+                        await fillField("address.city", SAMPLE_CORPORATE_1.address.city);
+                        await fillField("address.country", SAMPLE_CORPORATE_1.address.country);
+                        await fillField("address.province", SAMPLE_CORPORATE_1.address.province);
+                        await fillField("address.postalCode", SAMPLE_CORPORATE_1.address.postalCode);
+                    }
+
+                    await delay(300);
+                    if (SAMPLE_CORPORATE_1.contacts && SAMPLE_CORPORATE_1.contacts.length > 0) {
+                        const contact = SAMPLE_CORPORATE_1.contacts[0];
+                        await fillField("contacts.0.firstName", contact.firstName);
+                        await fillField("contacts.0.lastName", contact.lastName);
+                        await fillField("contacts.0.phone", contact.phone);
+                        // Added email autofill as per request
+                        await fillField("contacts.0.email", contact.email);
+
+                        // Autofill Role (Moved before Enrollment policies)
+                        await delay(300);
+                        await fillField("contacts.0.role", "HR Admin Access");
+                    }
+
+                    await fillField("waitingPeriodInitial", SAMPLE_CORPORATE_1.waitingPeriodInitial ? "yes" : "no");
+                    await fillField("waitingPeriodNewHires", SAMPLE_CORPORATE_1.waitingPeriodNewHires);
+                    await fillField("defineCoverageTiers", SAMPLE_CORPORATE_1.defineCoverageTiers ? "yes" : "no");
+                    await fillField("paymentMethod", SAMPLE_CORPORATE_1.paymentMethod);
+                    await fillField("showEmployerName", SAMPLE_CORPORATE_1.showEmployerName ? "yes" : "no");
+                    await fillField("employeeCount", SAMPLE_CORPORATE_1.employeeCount || 150, true);
+
+                    // Final Step: Submit Button Highlight
+                    await delay(500);
+                    setIsSubmittingHighlighted(true);
+                    setIsWorkflowActive(false);
+
+                    const finalMsg = "Excellent. This HR contact is now configured. Please click the 'Save & Next' button below to navigate to the next step.";
+                    openChat(finalMsg);
+
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    setActiveFillingField("submit-button");
+                    await speakText(finalMsg);
+                } catch (e: any) {
+                    if (e.message === "WorkflowCancelled") {
+                        console.log("Workflow cancelled");
+                        // Reset local workflow states
+                        setActiveFillingField(null);
+                        setIsSubmittingHighlighted(false);
+                        // Optional: stop speech if still going
+                        // stopSpeech(); // imported from google-tts
+                    } else {
+                        console.error("Workflow error:", e);
+                    }
                 }
-
-                await fillField("waitingPeriodInitial", SAMPLE_CORPORATE_1.waitingPeriodInitial ? "yes" : "no");
-                await fillField("waitingPeriodNewHires", SAMPLE_CORPORATE_1.waitingPeriodNewHires);
-                await fillField("defineCoverageTiers", SAMPLE_CORPORATE_1.defineCoverageTiers ? "yes" : "no");
-                await fillField("paymentMethod", SAMPLE_CORPORATE_1.paymentMethod);
-                await fillField("showEmployerName", SAMPLE_CORPORATE_1.showEmployerName ? "yes" : "no");
-                await fillField("employeeCount", SAMPLE_CORPORATE_1.employeeCount || 150, true);
-
-                // Final Step: Submit Button Highlight
-                await delay(500);
-                setIsSubmittingHighlighted(true);
-                setIsWorkflowActive(false);
-
-                const finalMsg = "Excellent. This HR contact is now configured. Please click the 'Save & Next' button below to navigate to the next step.";
-                openChat(finalMsg);
-
-                await new Promise(resolve => setTimeout(resolve, 500));
-                setActiveFillingField("submit-button");
-                await speakText(finalMsg);
             };
 
             // Only run if fields are empty to avoid overwriting user edits
