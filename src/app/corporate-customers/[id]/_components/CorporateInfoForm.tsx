@@ -365,6 +365,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     // Professional Auto-save and Navigate after 5 seconds
                     const autoSubmitTimer = setTimeout(() => {
                         if (isWorkflowActiveRef.current || !isWorkflowActiveRef.current) { // Trigger even if workflow just finished
+                            localStorage.setItem("max_guide_step", "tier_config");
                             handleSubmit(onSubmit)();
                         }
                     }, 5000);
@@ -402,6 +403,11 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
 
     const onSubmit: SubmitHandler<FormValues> = async (data) => {
         try {
+            // If the guide was active or recently finished, signal the next step
+            if (activeFillingField || isSubmittingHighlighted) {
+                localStorage.setItem("max_guide_step", "tier_config");
+            }
+
             updateCorporateInfo({
                 broker: data.broker,
                 name: data.name,
