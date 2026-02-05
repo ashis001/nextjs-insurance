@@ -75,8 +75,8 @@ export default function CorporatePage({ params }: { params: { id: string } }) {
                 </header>
 
                 {/* Tabs Bar - Sticky Below Header */}
-                <div className="sticky top-20 z-40 px-8 py-4 bg-white/90 backdrop-blur-lg transition-all duration-300 pointer-events-none">
-                    <div className="flex p-1 bg-white/95 backdrop-blur-xl border border-slate-200/60 rounded-xl w-fit shadow-sm pointer-events-auto">
+                <div className="sticky top-20 z-40 px-8 py-4 transition-all duration-300 pointer-events-none">
+                    <div className="flex p-1 bg-white/50 backdrop-blur-md border border-slate-200/60 rounded-xl w-fit shadow-sm pointer-events-auto">
                         <button className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all duration-300 ${activeStage === "CORPORATE_INFO" ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
                             <Globe className="w-3.5 h-3.5" />
                             Corporate Info
