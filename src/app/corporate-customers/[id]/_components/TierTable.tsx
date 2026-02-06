@@ -2,7 +2,7 @@
 
 import { useCorporateEngine } from "./useCorporateEngine";
 import { Tier } from "@/lib/types";
-import { Trash2, Edit2, Info, Plus, ChevronLeft, ChevronRight, AlertCircle, Copy } from "lucide-react";
+import { Trash2, Edit2, Info, Plus, ChevronLeft, ChevronRight, AlertCircle, Copy, CheckCircle2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { TierEditorPanel } from "./TierEditorPanel";
 import clsx from "clsx";
@@ -191,6 +191,7 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
 
                     // If this was part of a guide workflow, continue to next step
                     if (guideActive) {
+                        localStorage.setItem("max_guide_step", "setup_status");
                         // After saving a tier in guide mode, advance to next stage
                         setTimeout(() => {
                             engine.attemptAdvance();
@@ -278,9 +279,19 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                                 ];
 
                                 return (
-                                    <tr key={tier.id} className="hover:bg-slate-50 border-b border-gray-200 align-top">
+                                    <tr key={tier.id} className={clsx(
+                                        "hover:bg-slate-50 border-b border-gray-200 align-top transition-colors",
+                                        tier.isValid ? "bg-emerald-50/20" : "bg-white"
+                                    )}>
                                         <td className="px-3 py-3 border-r border-gray-200 text-center font-medium">{index + 1}</td>
-                                        <td className="px-3 py-3 border-r border-gray-200 font-bold text-gray-800">{tier.name || `Tier${index + 1}`}</td>
+                                        <td className="px-3 py-3 border-r border-gray-200 font-bold text-gray-800">
+                                            <div className="flex items-center gap-2">
+                                                {tier.name || `Tier${index + 1}`}
+                                                {tier.isValid && (
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-500 fill-emerald-50" />
+                                                )}
+                                            </div>
+                                        </td>
                                         <td className="px-3 py-3 border-r border-gray-200">
                                             {tier.lengthOfService === "0 Months" || tier.lengthOfService === "No" ? "None" : tier.lengthOfService}
                                         </td>

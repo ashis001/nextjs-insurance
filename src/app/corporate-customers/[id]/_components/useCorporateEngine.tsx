@@ -132,7 +132,6 @@ export function useCorporateEngine(corporateId: string) {
                     await setSetupStage("SETUP_STATUS");
                     return true;
                 } else {
-                    alert("Please configure at least one active tier with plans.");
                     return false;
                 }
             case "SETUP_STATUS":

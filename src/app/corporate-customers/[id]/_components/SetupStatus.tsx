@@ -1,15 +1,93 @@
 "use client";
 
 import { useCorporateEngine } from "./useCorporateEngine";
-import { ChevronLeft, ChevronRight, X, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Check, MousePointer2 } from "lucide-react";
 import { Tier } from "@/lib/types";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useChat } from "@/context/ChatContext";
+import { speakText } from "@/lib/google-tts";
+import clsx from "clsx";
 
 export function SetupStatus({ engine }: { engine: ReturnType<typeof useCorporateEngine> }) {
     const { corporate, attemptAdvance, setSetupStage } = engine;
 
     const [modalState, setModalState] = useState<'NONE' | 'SELECT_SUBDOMAIN' | 'SELECT_ADMINS' | 'SUCCESS'>('NONE');
     const [selectedSubdomain, setSelectedSubdomain] = useState("");
+    const { isWorkflowActive, openChat, setIsWorkflowActive } = useChat();
+    const hasStartedRef = useRef(false);
+    const [activeFillingField, setActiveFillingField] = useState<string | null>(null);
+    const [pointerPos, setPointerPos] = useState<{ top: number, left: number } | null>(null);
+
+    // Helper for guide
+    const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+    const fillField = async (id: string, speech: string, action: () => void) => {
+        if (!isWorkflowActive) throw new Error("WorkflowCancelled");
+
+        setActiveFillingField(id);
+        const el = document.getElementById(id);
+        if (el) {
+            const rect = el.getBoundingClientRect();
+            setPointerPos({
+                top: rect.top + window.scrollY + rect.height / 2,
+                left: rect.left + window.scrollX + rect.width / 2
+            });
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        openChat(speech);
+        await speakText(speech);
+        await delay(800);
+        action();
+        await delay(1200);
+        setActiveFillingField(null);
+        setPointerPos(null);
+    };
+
+    useEffect(() => {
+        const guideStep = localStorage.getItem("max_guide_step");
+        if (guideStep === "setup_status" && isWorkflowActive && !hasStartedRef.current) {
+            hasStartedRef.current = true;
+            const runGuide = async () => {
+                try {
+                    await delay(1500);
+
+                    // Step 1: Click Next to start finalization
+                    await fillField("setup-next-btn", "Excellent. Everything looks perfect. Let's finalize the setup by configuring your corporate portal and admin access.", () => {
+                        setModalState('SELECT_SUBDOMAIN');
+                    });
+
+                    // Step 2: Select Subdomain
+                    await fillField("subdomain-0", "First, let's choose a subdomain for your insurance portal. I'll select the recommended one for you.", () => {
+                        setSelectedSubdomain(subdomainOptions[0]);
+                    });
+
+                    // Step 3: Confirm Subdomain
+                    await fillField("subdomain-confirm-btn", "Confirming the subdomain selection.", () => {
+                        setModalState('SELECT_ADMINS');
+                    });
+
+                    // Step 4: Confirm Admins
+                    await fillField("admins-confirm-btn", "Lastly, we'll send the invite links to the group administrators. Clicking confirm to finish.", () => {
+                        setModalState('SUCCESS');
+                    });
+
+                    // Step 5: Final OK
+                    await fillField("final-ok-btn", "Congratulations! The corporate profile has been successfully created and sent for approval.", () => {
+                        setSetupStage("OVERVIEW");
+                        localStorage.removeItem("max_guide_step");
+                        setIsWorkflowActive(false);
+                    });
+
+                } catch (e: any) {
+                    if (e.message === "WorkflowCancelled") {
+                        console.log("Setup status workflow cancelled");
+                    }
+                }
+            };
+            runGuide();
+        }
+    }, [isWorkflowActive]);
 
     // Calculate setup percentage (mock logic based on completed fields or active tiers)
     const hasActiveTiers = corporate.tiers.some((t: Tier) => t.isValid && t.status === "Active");
@@ -102,8 +180,12 @@ export function SetupStatus({ engine }: { engine: ReturnType<typeof useCorporate
                     <ChevronLeft className="h-3.5 w-3.5" /> Previous
                 </button>
                 <button
+                    id="setup-next-btn"
                     onClick={() => setModalState('SELECT_SUBDOMAIN')}
-                    className="flex items-center gap-2 rounded bg-[#1e3a5f] px-4 py-2 text-xs font-bold text-white shadow hover:bg-slate-800 transition-all active:scale-95 uppercase tracking-wide"
+                    className={clsx(
+                        "flex items-center gap-2 rounded bg-[#1e3a5f] px-4 py-2 text-xs font-bold text-white shadow transition-all active:scale-95 uppercase tracking-wide",
+                        activeFillingField === "setup-next-btn" ? "ring-4 ring-blue-500/50 scale-110 shadow-xl" : "hover:bg-slate-800"
+                    )}
                 >
                     Next <ChevronRight className="h-3.5 w-3.5" />
                 </button>
@@ -125,21 +207,32 @@ export function SetupStatus({ engine }: { engine: ReturnType<typeof useCorporate
                                 {subdomainOptions.map((opt) => (
                                     <label key={opt} className="flex items-center gap-3 cursor-pointer group">
                                         <input
+                                            id={`subdomain-${subdomainOptions.indexOf(opt)}`}
                                             type="radio"
                                             name="subdomain"
                                             checked={selectedSubdomain === opt}
                                             onChange={() => setSelectedSubdomain(opt)}
-                                            className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            className={clsx(
+                                                "h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500 transition-all",
+                                                activeFillingField === `subdomain-${subdomainOptions.indexOf(opt)}` && "ring-2 ring-blue-500 scale-125"
+                                            )}
                                         />
-                                        <span className="text-[14px] text-gray-800 group-hover:text-blue-600 transition-colors font-medium">{opt}</span>
+                                        <span className={clsx(
+                                            "text-[14px] transition-colors font-medium",
+                                            selectedSubdomain === opt ? "text-blue-600 font-bold" : "text-gray-800 group-hover:text-blue-600"
+                                        )}>{opt}</span>
                                     </label>
                                 ))}
                             </div>
                         </div>
                         <div className="px-6 py-4 flex justify-end bg-white border-t border-gray-100">
                             <button
+                                id="subdomain-confirm-btn"
                                 onClick={() => setModalState('SELECT_ADMINS')}
-                                className="bg-[#0f2a4a] text-white rounded px-6 py-2 text-[12px] font-bold hover:bg-slate-800 transition-all shadow-sm"
+                                className={clsx(
+                                    "bg-[#0f2a4a] text-white rounded px-6 py-2 text-[12px] font-bold transition-all shadow-sm",
+                                    activeFillingField === "subdomain-confirm-btn" ? "ring-4 ring-blue-500/50 scale-105 shadow-xl" : "hover:bg-slate-800"
+                                )}
                             >
                                 Confirm
                             </button>
@@ -182,8 +275,12 @@ export function SetupStatus({ engine }: { engine: ReturnType<typeof useCorporate
                         </div>
                         <div className="px-6 py-4 flex justify-end bg-white border-t border-gray-100">
                             <button
+                                id="admins-confirm-btn"
                                 onClick={() => setModalState('SUCCESS')}
-                                className="bg-[#74849c] text-white rounded px-6 py-2 text-[12px] font-bold hover:bg-slate-600 transition-all shadow-sm"
+                                className={clsx(
+                                    "bg-[#74849c] text-white rounded px-6 py-2 text-[12px] font-bold transition-all shadow-sm",
+                                    activeFillingField === "admins-confirm-btn" ? "ring-4 ring-blue-500/50 scale-105 shadow-xl" : "hover:bg-slate-600"
+                                )}
                             >
                                 Confirm
                             </button>
@@ -204,8 +301,12 @@ export function SetupStatus({ engine }: { engine: ReturnType<typeof useCorporate
                                 Corporate Profile created and sent to Corporate <br /> Plan Administrators for approval
                             </p>
                             <button
+                                id="final-ok-btn"
                                 onClick={() => setSetupStage("OVERVIEW")}
-                                className="px-6 py-2 bg-[#042c5c] rounded text-[12px] font-black text-white shadow-md hover:bg-slate-800 transition-all uppercase"
+                                className={clsx(
+                                    "px-6 py-2 bg-[#042c5c] rounded text-[12px] font-black text-white shadow-md transition-all uppercase",
+                                    activeFillingField === "final-ok-btn" ? "ring-4 ring-blue-500/50 scale-110 shadow-xl" : "hover:bg-slate-800"
+                                )}
                             >
                                 OK
                             </button>
@@ -213,6 +314,37 @@ export function SetupStatus({ engine }: { engine: ReturnType<typeof useCorporate
                     </div>
                 </div>
             )}
+            {/* Guide Pointer */}
+            {pointerPos && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: pointerPos.top,
+                        left: pointerPos.left,
+                        transform: 'translate(-50%, -100%)',
+                        pointerEvents: 'none',
+                        zIndex: 10000
+                    }}
+                    className="transition-all duration-300 ease-out"
+                >
+                    <div className="relative flex flex-col items-center animate-nina-pointer-float">
+                        <div className="text-red-500 filter drop-shadow-[0_4px_12px_rgba(239,68,68,0.4)] transform rotate-[225deg]">
+                            <MousePointer2 className="w-6 h-6 fill-red-500" />
+                        </div>
+                        <div className="absolute inset-0 -m-1 rounded-full bg-red-500 animate-ping opacity-20 scale-125" />
+                    </div>
+                </div>
+            )}
+
+            <style jsx global>{`
+                @keyframes nina-pointer-float {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-8px); }
+                }
+                .animate-nina-pointer-float {
+                  animation: nina-pointer-float 1.5s ease-in-out infinite;
+                }
+            `}</style>
         </div>
     );
 }

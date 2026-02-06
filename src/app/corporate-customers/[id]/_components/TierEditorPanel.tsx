@@ -246,14 +246,14 @@ export function TierEditorPanel({
 
         const updatePosition = () => {
             const el = document.getElementById(activeFillingField);
-            const containerEl = scrollContainerRef.current;
+            const containerEl = innerFormRef.current;
             if (el && containerEl) {
                 const rect = el.getBoundingClientRect();
                 const containerRect = containerEl.getBoundingClientRect();
 
-                // Position relative to the scrollable content
+                // Position relative to the form container (parent of both scroll area and footer)
                 const newPos = {
-                    top: rect.top - containerRect.top + containerEl.scrollTop,
+                    top: rect.top - containerRect.top,
                     left: rect.left - containerRect.left + rect.width / 2
                 };
                 setPointerPos(newPos);
@@ -300,8 +300,8 @@ export function TierEditorPanel({
             const runGuide = async () => {
                 try {
                     hasStartedRef.current = true;
-                    // Don't set workflow active here since it should already be active from parent
-                    // setIsWorkflowActive(true);
+                    // Set workflow active to prevent MaxGreeting popup from showing
+                    setIsWorkflowActive(true);
                     isWorkflowActiveRef.current = true;
 
                     const delay = async (ms: number) => {
@@ -353,16 +353,23 @@ export function TierEditorPanel({
                             console.warn(`Element with id "${config.id}" not found after retries`);
                         }
 
-                        // 3. Auto-scroll if element is below viewport (like form page)
-                        if (el) {
+                        // 3. Auto-scroll Logic - Professional Implementation
+                        if (el && scrollContainerRef.current) {
                             const rect = el.getBoundingClientRect();
-                            // Only auto-scroll if the element is BELOW the viewport (moving forward)
-                            const isBelow = rect.top > window.innerHeight;
+                            const containerRect = scrollContainerRef.current.getBoundingClientRect();
 
-                            if (isBelow) {
-                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Check if element is outside the scroll container's visible area
+                            const isAbove = rect.top < containerRect.top;
+                            const isBelow = rect.bottom > containerRect.bottom;
+
+                            if (isAbove || isBelow) {
+                                el.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center',
+                                    inline: 'nearest'
+                                });
                                 // Wait for scroll to stabilize
-                                await delay(800);
+                                await delay(1000);
                             }
                         }
 
@@ -499,10 +506,76 @@ export function TierEditorPanel({
                     // Wait for modal to close and state to settle
                     await delay(1500);
 
+                    // STEP: Expand "Emergency Travel Protection" section
+                    await fillField({
+                        id: "cat-cm2-btn",
+                        speech: TIER_VOICE_MESSAGES.EXPAND_TRAVEL_PROTECTION,
+                        action: () => {
+                            if (!openCats["cm2"]) toggleCat("cm2");
+                        }
+                    });
+
                     await delay(800);
 
-                    // Skip travel for now to keep it focused on the user's requested flow
-                    // But if they want more, we can add them easily.
+                    // STEP: Select "Max Insurance Travel" with Single variant
+                    await fillField({
+                        id: "plan-tr1-single-check",
+                        speech: TIER_VOICE_MESSAGES.SELECT_TRAVEL_PLAN,
+                        action: () => {
+                            const target = PLAN_CATEGORIES.CORPORATE[1].products.find(p => p.id === "tr1");
+                            if (target) togglePlan("corporate", target, "Single");
+                        }
+                    });
+
+                    // STEP: Fill Headcount Modal for Travel
+                    await delay(800);
+
+                    await fillField({
+                        id: "new-hc-input",
+                        speech: "I'll set the headcount for travel protection to 150 as well.",
+                        action: () => {
+                            const input = document.getElementById("new-hc-input") as HTMLInputElement;
+                            if (input) input.value = "150";
+                        }
+                    });
+
+                    await delay(800);
+
+                    await fillField({
+                        id: "hc-date-select",
+                        speech: "Selecting the effective date.",
+                        action: () => {
+                            const select = document.getElementById("hc-date-select") as HTMLSelectElement;
+                            if (select) {
+                                select.selectedIndex = 2;
+                                select.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        }
+                    });
+
+                    await delay(800);
+
+                    await fillField({
+                        id: "hc-update-btn",
+                        speech: "And updating the travel protection headcount.",
+                        action: () => {
+                            const btn = document.getElementById("hc-update-btn");
+                            if (btn) {
+                                btn.click();
+                                btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                                setTimeout(() => {
+                                    if (showHeadCountModal) {
+                                        const input = document.getElementById('new-hc-input') as HTMLInputElement;
+                                        updateHeadCount(Number(input?.value || 150));
+                                    }
+                                }, 300);
+                            }
+                        }
+                    });
+
+                    await delay(1500);
+
+                    await delay(800);
 
                     // 3. Core Plans (Essential Health) - Two-Step Process
 
@@ -601,41 +674,7 @@ export function TierEditorPanel({
 
                     await delay(1500);
 
-                    // STEP 1: Expand Health & Dental Insurance category for upgrades
-                    await fillField({
-                        id: "cat-ug2-btn",
-                        speech: "Let me expand the Health & Dental Insurance section to view upgrade options.",
-                        action: () => {
-                            setOpenCats(prev => ({ ...prev, "ug2": true }));
-                        }
-                    });
-
-                    await delay(1200);
-
-                    // STEP 2: Expand Private Health subcategory
-                    await fillField({
-                        id: "subcat-ugsub_ph-btn",
-                        speech: "Expanding the Private Health subcategory.",
-                        action: () => {
-                            setOpenSubCats(prev => ({ ...prev, "ugsub_ph": true }));
-                        }
-                    });
-
-                    await delay(1200);
-
-                    // STEP 3: Select Gateway Silver upgrade plan
-                    await fillField({
-                        id: "plan-ug_gs1-check",
-                        speech: TIER_VOICE_MESSAGES.SELECT_UPGRADE_PLAN,
-                        action: () => {
-                            const target = PLAN_CATEGORIES.UPGRADE[1].subcategories?.[0].products.find(p => p.id === "ug_gs1");
-                            if (target) togglePlan("upgrade", target, "Couple");
-                        }
-                    });
-
-                    await delay(800);
-
-                    // STEP 4: Expand Private Health category for another upgrade
+                    // STEP 1: Expand Private Health category (Matching visual sequence)
                     await fillField({
                         id: "cat-ug1-btn",
                         speech: "Now expanding the Private Health category for premium upgrade options.",
@@ -646,17 +685,62 @@ export function TierEditorPanel({
 
                     await delay(1200);
 
-                    // STEP 5: Select Complete Executive Care upgrade
+                    // STEP 1.1: Expand Private Health subcategory
+                    await fillField({
+                        id: "subcat-ugsub_ph-btn",
+                        speech: "Opening the detailed list of Private Health upgrade plans.",
+                        action: () => {
+                            setOpenSubCats(prev => ({ ...prev, "ugsub_ph": true }));
+                        }
+                    });
+
+                    await delay(1200);
+
+                    // STEP 2: Select Complete Executive Care upgrade
                     await fillField({
                         id: "plan-ug_cx1-check",
-                        speech: "I'll also enable a premium 'Complete Executive Care' upgrade option.",
+                        speech: "I'll enable a premium 'Complete Executive Care' upgrade option here.",
                         action: () => {
-                            const target = PRIVATE_HEALTH_PRODUCTS.find(p => p.id === "ug_cx1");
+                            const target = PLAN_CATEGORIES.UPGRADE[0].subcategories?.[0].products.find(p => p.id === "ug_cx1");
                             if (target) togglePlan("upgrade", target);
                         }
                     });
 
                     await delay(1200);
+
+                    // STEP 3: Expand Health & Dental Insurance section
+                    await fillField({
+                        id: "cat-ug2-btn",
+                        speech: "Next, let's look at the Health & Dental Insurance upgrade options.",
+                        action: () => {
+                            setOpenCats(prev => ({ ...prev, "ug2": true }));
+                        }
+                    });
+
+                    await delay(1200);
+
+                    // STEP 4: Expand Gateway subcategory
+                    await fillField({
+                        id: "subcat-ugsub_gateway-btn",
+                        speech: "Expanding the Gateway plans subcategory.",
+                        action: () => {
+                            setOpenSubCats(prev => ({ ...prev, "ugsub_gateway": true }));
+                        }
+                    });
+
+                    await delay(1200);
+
+                    // STEP 5: Select Gateway Silver upgrade plan
+                    await fillField({
+                        id: "plan-ug_gs1-check",
+                        speech: TIER_VOICE_MESSAGES.SELECT_UPGRADE_PLAN,
+                        action: () => {
+                            const target = PLAN_CATEGORIES.UPGRADE[1].subcategories?.[0].products.find(p => p.id === "ug_gs1");
+                            if (target) togglePlan("upgrade", target);
+                        }
+                    });
+
+                    await delay(800);
 
                     // 5. Voluntary Plans (Employee Choice)
                     await fillField({
@@ -733,9 +817,11 @@ export function TierEditorPanel({
                 } catch (e: any) {
                     if (e.message === "WorkflowCancelled") {
                         console.log("Tier Editor workflow cancelled");
-                        // Don't set workflow inactive here, let parent handle it
-                        // setIsWorkflowActive(false);
                     }
+                } finally {
+                    // Always reset workflow state when guide completes
+                    setIsWorkflowActive(false);
+                    hasStartedRef.current = false;
                 }
             };
             runGuide();
@@ -818,7 +904,8 @@ export function TierEditorPanel({
     const renderProducts = (section: keyof Tier['plans'], products: Product[]) => {
         return products.map(p => {
             const selected = (plans[section] as Plan[]).find(item => item.id === p.id);
-            const isHighlighted = activeFillingField === `plan-${p.id}-check`;
+            const isHighlighted = activeFillingField === `plan-${p.id}-check` ||
+                p.variants?.some(v => activeFillingField === `plan-${p.id}-${v.toLowerCase()}-check`);
             return (
                 <div
                     key={p.id}
@@ -844,10 +931,14 @@ export function TierEditorPanel({
                             {p.variants?.map(v => (
                                 <label key={v} className="flex items-center gap-1.5 cursor-pointer group">
                                     <input
+                                        id={`plan-${p.id}-${v.toLowerCase()}-check`}
                                         type="checkbox"
                                         checked={isSelected(section, p.id, v)}
                                         onChange={() => togglePlan(section, p, v)}
-                                        className="h-3 w-3 rounded border-gray-300 text-blue-600 focus:ring-0"
+                                        className={clsx(
+                                            "h-3 w-3 rounded border-gray-300 text-blue-600 focus:ring-0 transition-all duration-300",
+                                            activeFillingField === `plan-${p.id}-${v.toLowerCase()}-check` && "ring-2 ring-blue-500 scale-125"
+                                        )}
                                     />
                                     <span className="text-[9px] font-bold text-slate-500 group-hover:text-blue-700 transition-colors uppercase">{v}</span>
                                 </label>
@@ -1269,28 +1360,6 @@ export function TierEditorPanel({
                             </div>
                         </div>
                     )}
-
-                    {/* Guide Pointer (Nina's Mouse) - Inside scroll container for natural scrolling */}
-                    {pointerPos && activeFillingField && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: pointerPos.top - 10,
-                                left: pointerPos.left,
-                                transform: 'translate(-50%, -100%)',
-                                pointerEvents: 'none',
-                                zIndex: 10000
-                            }}
-                            className="transition-all duration-300 ease-out"
-                        >
-                            <div className="relative flex flex-col items-center animate-nina-pointer-float">
-                                <div className="text-red-500 filter drop-shadow-[0_4px_12px_rgba(239,68,68,0.4)] transform rotate-[225deg]">
-                                    <MousePointer2 className="w-6 h-6 fill-red-500" />
-                                </div>
-                                <div className="absolute inset-0 -m-1 rounded-full bg-red-500 animate-ping opacity-20 scale-125" />
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Sticky Footer */}
@@ -1298,6 +1367,28 @@ export function TierEditorPanel({
                     <button id="tier-save-btn" onClick={handleSubmit(onFormSubmit)} className="bg-[#1e3a5f] rounded px-8 py-2 text-[11px] font-black text-white hover:bg-slate-800 transition-all shadow-md uppercase tracking-wide">Save</button>
                     <button onClick={onCancel} className="bg-white border border-slate-300 rounded px-8 py-2 text-[11px] font-black text-[#1e3a5f] hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm uppercase tracking-wide">Close</button>
                 </div>
+
+                {/* Guide Pointer (Nina's Mouse) - Outside scroll container to stay on top of footer */}
+                {pointerPos && activeFillingField && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: pointerPos.top - 10,
+                            left: pointerPos.left,
+                            transform: 'translate(-50%, -100%)',
+                            pointerEvents: 'none',
+                            zIndex: 10000
+                        }}
+                        className="transition-all duration-300 ease-out"
+                    >
+                        <div className="relative flex flex-col items-center animate-nina-pointer-float">
+                            <div className="text-red-500 filter drop-shadow-[0_4px_12px_rgba(239,68,68,0.4)] transform rotate-[225deg]">
+                                <MousePointer2 className="w-6 h-6 fill-red-500" />
+                            </div>
+                            <div className="absolute inset-0 -m-1 rounded-full bg-red-500 animate-ping opacity-20 scale-125" />
+                        </div>
+                    </div>
+                )}
             </div>
             <style jsx global>{`
                 @keyframes nina-pointer-float {

@@ -12,6 +12,8 @@ export const TIER_VOICE_MESSAGES = {
     SELECT_CORPORATE_PLAN: "Great. Now, let's add some Corporate plans. These are fully company-paid benefits.",
     EXPAND_MENTAL_HEALTH: "Please expand the Mental Health & Wellbeing section to view available wellness plans.",
     SELECT_COMPLETE_WELLNESS: "Now select the Complete Wellness policy from this category for comprehensive mental health support.",
+    EXPAND_TRAVEL_PROTECTION: "Next, let's expand the Emergency Travel Protection section to include travel benefits.",
+    SELECT_TRAVEL_PLAN: "I'll select the Max Insurance Travel plan with Single coverage for this tier.",
 
     // Headcount Modal - Three-Step Process
     MODAL_HEADCOUNT: "Please enter the headcount for this plan. I'll set it to 150 employees.",

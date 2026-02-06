@@ -47,15 +47,15 @@ export default function CorporatePage({ params }: { params: { id: string } }) {
         <div className="flex min-h-screen bg-gradient-to-tr from-slate-200 via-indigo-50 to-blue-100 font-sans selection:bg-blue-600/10">
             <Sidebar />
 
-            <main className="flex-1 ml-64 relative overflow-hidden flex flex-col">
+            <main className="flex-1 ml-64 relative flex flex-col">
                 <AnimatedGrid />
 
                 {/* Dynamic Background Accents */}
                 <div className="absolute top-[-10%] left-[-5%] w-[400px] h-[400px] bg-blue-400/10 rounded-full blur-[100px] pointer-events-none animate-pulse" />
                 <div className="absolute bottom-[-5%] right-[-5%] w-[400px] h-[400px] bg-indigo-400/10 rounded-full blur-[100px] pointer-events-none animate-pulse" />
 
-                {/* Premium Header - Sticky */}
-                <header className="sticky top-0 z-50 flex h-20 min-h-[80px] items-center justify-between border-b border-slate-200/60 bg-white/80 backdrop-blur-xl px-8 shadow-sm">
+                {/* Premium Header - Relative flow */}
+                <header className="relative z-50 flex h-20 items-center justify-between border-b border-slate-200/60 bg-white/80 backdrop-blur-xl px-8 shadow-sm">
                     <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Corporate Management</h1>
@@ -74,8 +74,8 @@ export default function CorporatePage({ params }: { params: { id: string } }) {
                     </div>
                 </header>
 
-                {/* Tabs Bar - Sticky Below Header */}
-                <div className="sticky top-20 z-40 px-8 py-4 transition-all duration-300 pointer-events-none">
+                {/* Tabs Bar - Relative flow */}
+                <div className="relative z-40 px-8 py-4 transition-all duration-300">
                     <div className="flex p-1 bg-white/50 backdrop-blur-md border border-slate-200/60 rounded-xl w-fit shadow-sm pointer-events-auto">
                         <button className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all duration-300 ${activeStage === "CORPORATE_INFO" ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
                             <Globe className="w-3.5 h-3.5" />
@@ -96,8 +96,8 @@ export default function CorporatePage({ params }: { params: { id: string } }) {
                     </div>
                 </div>
 
-                {/* Main Content Area - Scrollable */}
-                <div className="relative z-10 flex-1 overflow-y-auto px-8 pt-4 pb-12 scroll-smooth">
+                {/* Main Content Area */}
+                <div className="relative z-10 px-8 pt-4 pb-12">
                     <div className="max-w-[1600px] mx-auto animate-scale-in">
                         {activeStage === "CORPORATE_INFO" && (
                             <CorporateInfoForm engine={engine} />
