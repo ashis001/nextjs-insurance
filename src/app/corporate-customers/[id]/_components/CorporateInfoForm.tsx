@@ -356,22 +356,25 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     setIsWorkflowActive(false);
 
                     const finalMsg = "Excellent. This HR contact is now configured. Please click the 'Save & Next' button below to navigate to the next step.";
-                    openChat(finalMsg);
+                    openChat(finalMsg, true); // Silent mode to prevent repetition
 
                     await new Promise(resolve => setTimeout(resolve, 500));
                     setActiveFillingField("submit-button");
+
+                    // Wait for speech to finish completely
                     await speakText(finalMsg);
 
-                    // Professional Auto-save and Navigate after 5 seconds
-                    const autoSubmitTimer = setTimeout(() => {
-                        if (isWorkflowActiveRef.current || !isWorkflowActiveRef.current) { // Trigger even if workflow just finished
-                            localStorage.setItem("max_guide_step", "tier_config");
-                            handleSubmit(onSubmit)();
-                        }
-                    }, 5000);
+                    // Professional pause after speech finishes
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+
+                    // Navigate now that speech is done
+                    if (isWorkflowActiveRef.current || !isWorkflowActiveRef.current) {
+                        localStorage.setItem("max_guide_step", "tier_config");
+                        handleSubmit(onSubmit)();
+                    }
 
                     // Add to cleanup or tracking if needed
-                    return () => clearTimeout(autoSubmitTimer);
+                    return;
                 } catch (e: any) {
                     if (e.message === "WorkflowCancelled") {
                         console.log("Workflow cancelled");

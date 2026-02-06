@@ -16,7 +16,7 @@ interface ChatContextType {
     isWorkflowActive: boolean;
     setIsWorkflowActive: (val: boolean) => void;
     toggleChat: () => void;
-    openChat: (message?: string) => void;
+    openChat: (message?: string, silent?: boolean) => void;
     closeChat: () => void;
     clearExternalMessage: () => void;
     updateWidth: (newWidth: number) => void;
@@ -62,11 +62,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         });
     }, []);
 
-    const openChat = useCallback((message?: string) => {
-        stopSpeech();
+    const openChat = useCallback((message?: string, silent: boolean = false) => {
+        if (!silent) stopSpeech();
         setIsMutedState(false);
         setGlobalMuteState(false);
-        if (message) setExternalMessage(message);
+        if (message) setExternalMessage(silent ? `SILENT:${message}` : message);
         setIsOpen(true);
     }, []);
 
