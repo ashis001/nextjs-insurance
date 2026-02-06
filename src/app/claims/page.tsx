@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { useChat } from "@/context/ChatContext";
 import { speakText } from "@/lib/google-tts";
 import { MousePointer2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const AnimatedGrid = () => (
     <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
@@ -31,6 +32,7 @@ const INSURANCE_TYPES = [
 ];
 
 export default function ClaimsPage() {
+    const router = useRouter();
     const { toggleChat, openChat, isWorkflowPaused, isWorkflowActive, setIsWorkflowActive } = useChat();
     const isWorkflowPausedRef = useRef(isWorkflowPaused);
     const isWorkflowActiveRef = useRef(isWorkflowActive);
@@ -62,11 +64,15 @@ export default function ClaimsPage() {
         setMounted(true);
 
         const guideStep = localStorage.getItem("max_guide_step");
+        
+        
+        // Handle the actual claims workflow (when already on the claims page)
         if (guideStep === "claim_insurance") {
             const runGuide = async () => {
                 try {
                     setIsWorkflowActive(true);
                     isWorkflowActiveRef.current = true; // Sync ref immediately
+                    
                     const delay = async (ms: number) => {
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
                         await new Promise(resolve => setTimeout(resolve, ms));
@@ -76,6 +82,7 @@ export default function ClaimsPage() {
                         }
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
                     };
+
                     await delay(1000);
 
                     // Step 1: Select Category
@@ -84,66 +91,163 @@ export default function ClaimsPage() {
                     if (el) {
                         setActiveFillingField(targetId);
                         await speakText("To start your claim, first select a medical category. Let's choose Medical Health.");
-                        await delay(1500);
+                        // Wait for speech to complete before proceeding
+                        await delay(2500); // Increased delay to ensure speech completes
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
-                        setSelectedType('health');
+                        
+                        // Click the element to trigger the selection
+                        el.click();
+                        
+                        // Wait for the UI to update
+                        await delay(500);
+                        
                         setStep(2);
                         setActiveFillingField(null);
                     }
 
                     await delay(1000);
 
-                    // Step 2: Fill Form
+                    // Step 2: Fill Form with enhanced guidance
                     const fillField = async (id: string, value: string, text: string) => {
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                        
+                        // Highlight the field
                         setActiveFillingField(id);
+                        
                         const input = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement;
                         if (input) {
+                            // Scroll to field if needed
                             const rect = input.getBoundingClientRect();
-                            if (rect.top > window.innerHeight) {
+                            if (rect.top > window.innerHeight || rect.bottom < 0) {
                                 input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                await delay(400);
+                                await delay(600); // Wait for scroll to complete
                             }
+                            
+                            // Focus the input
                             input.focus({ preventScroll: true });
+                            
+                            // Speak the instruction
                             await speakText(text);
-                            await delay(500);
+                            
+                            // Wait a bit after speaking
+                            await delay(800);
+                            
+                            // Type the value character by character
                             let current = "";
                             for (const char of value) {
                                 if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
                                 current += char;
                                 setFormData(prev => ({ ...prev, [id]: current }));
+                                
+                                // Random typing delay for realism
                                 await delay(30 + Math.random() * 20);
                             }
-                            await delay(500);
+                            
+                            // Wait after filling the field
+                            await delay(600);
                         }
                     };
 
+                    // Fill each form field with proper delays
                     await fillField("provider", "City General Hospital", "Enter the name of your medical provider.");
+                    await delay(500);
+                    
                     await fillField("date", "2026-02-01", "Select the date of service from your invoice.");
+                    await delay(500);
+                    
                     await fillField("amount", "245.50", "Enter the total claim amount.");
+                    await delay(500);
+                    
                     await fillField("diagnosis", "Regular checkup and flu vaccination.", "Briefly describe the reason for your visit.");
+                    await delay(500);
 
+                    // Highlight and speak about the next button
                     const nextBtn = document.getElementById("next-step-btn");
                     if (nextBtn) {
                         setActiveFillingField("next-step-btn");
                         await speakText("Great! I've prepared the details. Now click the 'Continue to Uploads' button to proceed.");
+                        await delay(1000); // Wait for the speech to complete
+                        
+                        // Click the button to move to the next step
+                        nextBtn.click();
                     }
 
-                    await delay(1000);
-                    // Final Step 3 Message
-                    openChat("I've prepared the claim details for you. Simply upload your receipt here and click Review to finish!");
-                    setIsWorkflowActive(false);
+                    // Wait for the next step to load
+                    await delay(1500);
+                    
+                    // Wait for step to change to 3 (upload) by checking for the presence of upload elements
+                    while (!document.getElementById("review-claim-btn") && isWorkflowActiveRef.current) {
+                        await delay(100);
+                    }
+                    
+                    // Now handle the upload step if we're on step 3
+                    if (document.getElementById("review-claim-btn") && isWorkflowActiveRef.current) {
+                        // Highlight the upload area
+                        const uploadArea = document.querySelector('.border-dashed.border-blue-200');
+                        if (uploadArea) {
+                            // Since the upload area doesn't have an ID, we'll use a generic selector
+                            // For the workflow, we'll simulate an upload
+                            await delay(1000);
+                            await speakText("Now you would upload your receipt or invoice here. For this demo, I'll simulate the upload process.");
+                            await delay(2000);
+                            
+                            // Click the next button to move to review step
+                            const nextBtn = document.getElementById("review-claim-btn");
+                            if (nextBtn) {
+                                nextBtn.click();
+                            }
+                        }
+                    }
+                    
+                    // Wait for step to change to 4 (review) by checking for the submit button
+                    await delay(1500);
+                    while (!document.getElementById("submit-claim-btn") && isWorkflowActiveRef.current) {
+                        await delay(100);
+                    }
+                    
+                    // Handle the review step if we're on step 4
+                    if (document.getElementById("submit-claim-btn") && isWorkflowActiveRef.current) {
+                        const reviewBtn = document.getElementById("submit-claim-btn");
+                        if (reviewBtn) {
+                            setActiveFillingField("submit-claim-btn");
+                            await speakText("Everything looks good. Now click the 'Submit Claim Request' button to finalize your claim.");
+                            await delay(1000);
+                            
+                            // Click the submit button
+                            reviewBtn.click();
+                        }
+                    }
+                    
+                    // Wait for submission
+                    await delay(2000);
+                    
+                    // Final message - only use openChat to avoid duplicate speech
+                    openChat("Your claim has been submitted successfully! The claim ID is CLM-89210. You can track the status in the claims dashboard.");
+                    
+                    // Wait a bit before deactivating workflow
+                    await delay(2000); // Increased delay to ensure message is processed
+                    
+                    // Only deactivate if workflow is still active
+                    if (isWorkflowActiveRef.current) {
+                        setIsWorkflowActive(false);
+                    }
                 } catch (e: any) {
                     if (e.message === "WorkflowCancelled") {
-                        console.log("Workflow cancelled");
+                        console.log("Claims workflow cancelled");
                         setActiveFillingField(null);
-                        // cleanup
                     } else {
-                        console.error(e);
+                        console.error("Claims workflow error:", e);
                     }
+                    
+                    // Cleanup in case of error
+                    setActiveFillingField(null);
+                    setIsWorkflowActive(false);
                 }
+                
+                // Clean up the guide step
                 localStorage.removeItem("max_guide_step");
             };
+            
             runGuide();
         }
     }, []);
@@ -214,7 +318,7 @@ export default function ClaimsPage() {
                         className="absolute z-[10000] pointer-events-none transition-all duration-500 ease-in-out"
                         style={{
                             left: pointerPos.left,
-                            top: pointerPos.top - 10,
+                            top: pointerPos.top,
                             transform: 'translate(-50%, -100%)'
                         }}
                     >
@@ -406,7 +510,7 @@ export default function ClaimsPage() {
                                 </div>
                             </div>
 
-                            <button onClick={handleNext} className="w-full mt-8 bg-[#0a1e3b] text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2">
+                            <button id="review-claim-btn" onClick={handleNext} className="w-full mt-8 bg-[#0a1e3b] text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-blue-900/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2">
                                 Review Claim <ArrowRight className="w-4 h-4" />
                             </button>
                         </div>
@@ -443,6 +547,7 @@ export default function ClaimsPage() {
                             </div>
 
                             <button
+                                id="submit-claim-btn"
                                 onClick={handleNext}
                                 disabled={isSubmitting}
                                 className="w-full mt-8 bg-blue-600 text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-blue-600/30 hover:shadow-2xl hover:bg-blue-500 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2"

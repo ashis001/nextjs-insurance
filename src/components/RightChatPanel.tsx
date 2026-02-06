@@ -382,7 +382,28 @@ export default function RightChatPanel() {
                     }
 
                     // 1st Visible Streamed Message: The trigger message
-                    await streamMessage(externalMessage, "assistant");
+                    const isSilent = externalMessage.startsWith("SILENT:");
+                    const actualMessage = isSilent ? externalMessage.slice(7) : externalMessage;
+
+                    if (isSilent) {
+                        // Stream without speech animation
+                        const id = Date.now().toString();
+                        setMessages(prev => [...prev, {
+                            id,
+                            text: "",
+                            sender: "assistant",
+                            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        }]);
+                        const words = actualMessage.split(" ");
+                        let currentText = "";
+                        for (let i = 0; i < words.length; i++) {
+                            currentText += (i === 0 ? "" : " ") + words[i];
+                            setMessages(prev => prev.map(m => m.id === id ? { ...m, text: currentText } : m));
+                            await new Promise(resolve => setTimeout(resolve, 80));
+                        }
+                    } else {
+                        await streamMessage(externalMessage, "assistant");
+                    }
 
                     // If it was the standard "Hi I'm Nina", we follow up with the Question + Tips
                     if (isStandardGreeting) {
@@ -607,6 +628,12 @@ export default function RightChatPanel() {
 
             let responseText = "";
 
+            if (query === "hi" || query === "hello") {
+                setIsTyping(false);
+                await streamMessage("Hi I am Nina, I am here to assist you.", "assistant");
+                return;
+            }
+
             // --- KNOWLEDGE BASE LOGIC (Analyzing Project Workflows) ---
             const isOnboardingQuery =
                 query.includes("onboard") ||
@@ -707,7 +734,7 @@ export default function RightChatPanel() {
             } else {
                 // Try searching for a specific corporate name
                 const found = corporates.find((c) =>
-                    query.includes((c.name || "").toLowerCase()),
+                    c.name && query.includes(c.name.toLowerCase()),
                 );
                 if (found) {
                     responseText =
@@ -941,8 +968,33 @@ export default function RightChatPanel() {
                                                         router.push("/corporate-customers");
                                                     }
                                                 } else if (action.value === "sample_claim") {
-                                                    localStorage.setItem("max_guide_step", "claim_insurance");
-                                                    router.push("/claims");
+                                                    // Interactive Guide Logic for Claims
+                                                    const navItem = document.getElementById("nav-item-claims");
+                                                    if (navItem) {
+                                                        // 1. Speak & Show Message
+                                                        streamMessage("Please select the Claims tab in the sidebar.", "assistant");
+
+                                                        const rect = navItem.getBoundingClientRect();
+                                                        setGuideTargetRect({
+                                                            top: rect.top,
+                                                            left: rect.left,
+                                                            width: rect.width,
+                                                            height: rect.height
+                                                        });
+
+                                                        // 2. Wait for a moment to show the pointer, then speak next part and navigate
+                                                        setTimeout(async () => {
+                                                            setGuideTargetRect(null);
+                                                            await streamMessage("Let's file a sample claim to show you how it works.", "assistant");
+
+                                                            localStorage.setItem("max_guide_step", "claim_insurance");
+                                                            router.push("/claims");
+                                                        }, 4000); // Time to allow for speech and pointer display
+                                                    } else {
+                                                        // Fallback
+                                                        localStorage.setItem("max_guide_step", "claim_insurance");
+                                                        router.push("/claims");
+                                                    }
                                                 } else if (action.value === "real_claim") {
                                                     router.push("/claims");
                                                 } else if (action.value === "navigate_claims") {

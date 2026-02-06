@@ -99,11 +99,12 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                     await delay(1200);
                     setActiveFillingField("add-tier-btn");
 
-                    // Speak and await completion BEFORE clicking the button
+                    // Display text in Chat UI and trigger manual speech (to prevent repetition)
+                    openChat(TIER_VOICE_MESSAGES.WELCOME_AND_ADD, true);
                     await speakText(TIER_VOICE_MESSAGES.WELCOME_AND_ADD);
 
-                    // Professional pause after speech completes
-                    await delay(3000);
+                    // Professional pause after speech completes - increased to ensure full sentence inclusion
+                    await delay(6000);
 
                     const addBtn = document.getElementById("add-tier-btn");
                     if (addBtn) {
@@ -145,11 +146,12 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                     await delay(1200);
                     setActiveFillingField("add-tier-btn");
 
-                    // Speak and await completion BEFORE clicking the button
+                    // Display text in Chat UI and trigger manual speech (to prevent repetition)
+                    openChat(TIER_VOICE_MESSAGES.WELCOME_AND_ADD, true);
                     await speakText(TIER_VOICE_MESSAGES.WELCOME_AND_ADD);
 
-                    // Professional pause after speech completes
-                    await delay(3000);
+                    // Professional pause after speech completes - increased to ensure full sentence inclusion
+                    await delay(6000);
 
                     const addBtn = document.getElementById("add-tier-btn");
                     if (addBtn) {
@@ -197,13 +199,13 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                         }
                     }
 
-                    // Speak completion message COMPLETELY
+                    // Display text in Chat UI and trigger manual speech (to prevent repetition)
                     const msg = TIER_VOICE_MESSAGES.COMPLETE;
-                    openChat(msg);
+                    openChat(msg, true);
                     await speakText(msg);
 
                     // Professional pause after speech finishes so it doesn't feel rushed
-                    await delay(2000);
+                    await delay(6000);
 
                     if (isWorkflowActive) {
                         // Set the next step for SetupStatus and advance
