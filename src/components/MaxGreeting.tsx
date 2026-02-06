@@ -6,12 +6,13 @@ import { useChat } from "@/context/ChatContext";
 import { speakText } from "@/lib/google-tts";
 
 export default function MaxGreeting() {
-    const { openChat, isOpen, hasGreeted, setHasGreeted, isMuted } = useChat();
+    const { openChat, isOpen, hasGreeted, setHasGreeted, isMuted, isWorkflowActive } = useChat();
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
         // Only run this logic if we are NOT currently open and haven't shown yet in this session
-        if (isOpen || hasGreeted) {
+        // Also skip if a workflow (like autofill guide) is active
+        if (isOpen || hasGreeted || isWorkflowActive) {
             return;
         }
 
@@ -43,7 +44,7 @@ export default function MaxGreeting() {
             window.removeEventListener('click', triggerSpeech);
             window.removeEventListener('keydown', triggerSpeech);
         };
-    }, [isOpen, hasGreeted, setHasGreeted]);
+    }, [isOpen, hasGreeted, setHasGreeted, isWorkflowActive]);
 
     // If chat is opened while we are visible, hide immediately
     useEffect(() => {

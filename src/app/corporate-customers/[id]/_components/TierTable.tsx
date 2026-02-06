@@ -2,22 +2,26 @@
 
 import { useCorporateEngine } from "./useCorporateEngine";
 import { Tier } from "@/lib/types";
-import { Trash2, Edit2, Info, Plus, ChevronLeft, ChevronRight, AlertCircle, Copy } from "lucide-react";
+import { Trash2, Edit2, Info, Plus, ChevronLeft, ChevronRight, X, Check, MousePointer2, AlertCircle, Copy, CheckCircle2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { TierEditorPanel } from "./TierEditorPanel";
 import clsx from "clsx";
 import { useChat } from "@/context/ChatContext";
 import { speakText } from "@/lib/google-tts";
-import { MousePointer2 } from "lucide-react";
 import { TIER_VOICE_MESSAGES } from "./tier-speech";
 
 export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEngine> }) {
     const { corporate, attemptAdvance, setSetupStage } = engine;
     const [editingTierId, setEditingTierId] = useState<string | null>(null);
     const [guideActive, setGuideActive] = useState(false);
+    const hasStartedRef = useRef(false);
+    const finalStepStartedRef = useRef(false);
     const [activeFillingField, setActiveFillingField] = useState<string | null>(null);
     const [pointerPos, setPointerPos] = useState<{ top: number, left: number } | null>(null);
     const tableRef = useRef<HTMLDivElement>(null);
+
+    // Helper for guide
+    const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
     // Continuous Pointer Re-sync Effect
     useEffect(() => {
@@ -58,7 +62,6 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
     const { openChat, isWorkflowPaused, isWorkflowActive, setIsWorkflowActive } = useChat();
     const isWorkflowPausedRef = useRef(isWorkflowPaused);
     const isWorkflowActiveRef = useRef(isWorkflowActive);
-    const hasStartedRef = useRef(false);
 
     useEffect(() => {
         isWorkflowPausedRef.current = isWorkflowPaused;
@@ -170,7 +173,57 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                 runContinuedGuide();
             }
         }
-    }, [corporate.stage, isWorkflowActive]);
+
+        // Handle the final "Next" button click after tier configuration is complete
+        if (guideStep === "tier_complete_next" && isWorkflowActive && !finalStepStartedRef.current) {
+            finalStepStartedRef.current = true;
+            const runFinalStep = async () => {
+                try {
+                    await delay(1000);
+
+                    // Highlight the "Next" button FIRST to show where we are going
+                    setActiveFillingField("tier-next-btn");
+
+                    // Update pointer position manually
+                    const nextBtn = document.getElementById("tier-next-btn");
+                    if (nextBtn) {
+                        const rect = nextBtn.getBoundingClientRect();
+                        const containerRect = tableRef.current?.getBoundingClientRect();
+                        if (containerRect) {
+                            setPointerPos({
+                                top: rect.top - containerRect.top + rect.height / 2,
+                                left: rect.left - containerRect.left + rect.width / 2
+                            });
+                        }
+                    }
+
+                    // Speak completion message COMPLETELY
+                    const msg = TIER_VOICE_MESSAGES.COMPLETE;
+                    openChat(msg);
+                    await speakText(msg);
+
+                    // Professional pause after speech finishes so it doesn't feel rushed
+                    await delay(2000);
+
+                    if (isWorkflowActive) {
+                        // Set the next step for SetupStatus and advance
+                        localStorage.setItem("max_guide_step", "setup_status");
+                        attemptAdvance();
+                        setActiveFillingField(null);
+                        setPointerPos(null);
+                    }
+                } catch (e: any) {
+                    console.error("Final tier step error:", e);
+                }
+            };
+            runFinalStep();
+        }
+
+        // Reset final step ref if we're not on that step anymore
+        if (guideStep !== "tier_complete_next" && finalStepStartedRef.current) {
+            finalStepStartedRef.current = false;
+        }
+    }, [corporate.stage, isWorkflowActive, corporate.tiers]);
 
     const hasValidTier = corporate.tiers.some(t => t.isValid && t.status === "Active");
     const editingTier = editingTierId ? corporate.tiers.find(t => t.id === editingTierId) : null;
@@ -191,10 +244,7 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
 
                     // If this was part of a guide workflow, continue to next step
                     if (guideActive) {
-                        // After saving a tier in guide mode, advance to next stage
-                        setTimeout(() => {
-                            engine.attemptAdvance();
-                        }, 500); // Small delay to allow UI updates
+                        localStorage.setItem("max_guide_step", "tier_complete_next");
                     }
                     setGuideActive(false); // Reset guide state on close
                 }}
@@ -278,9 +328,19 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                                 ];
 
                                 return (
-                                    <tr key={tier.id} className="hover:bg-slate-50 border-b border-gray-200 align-top">
+                                    <tr key={tier.id} className={clsx(
+                                        "hover:bg-slate-50 border-b border-gray-200 align-top transition-colors",
+                                        tier.isValid ? "bg-emerald-50/20" : "bg-white"
+                                    )}>
                                         <td className="px-3 py-3 border-r border-gray-200 text-center font-medium">{index + 1}</td>
-                                        <td className="px-3 py-3 border-r border-gray-200 font-bold text-gray-800">{tier.name || `Tier${index + 1}`}</td>
+                                        <td className="px-3 py-3 border-r border-gray-200 font-bold text-gray-800">
+                                            <div className="flex items-center gap-2">
+                                                {tier.name || `Tier${index + 1}`}
+                                                {tier.isValid && (
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-500 fill-emerald-50" />
+                                                )}
+                                            </div>
+                                        </td>
                                         <td className="px-3 py-3 border-r border-gray-200">
                                             {tier.lengthOfService === "0 Months" || tier.lengthOfService === "No" ? "None" : tier.lengthOfService}
                                         </td>
@@ -360,8 +420,12 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                     <ChevronLeft className="h-4 w-4" /> Previous
                 </button>
                 <button
+                    id="tier-next-btn"
                     onClick={() => attemptAdvance()}
-                    className="flex items-center gap-1.5 rounded-xl bg-[#0a1e3b] px-6 py-2.5 text-xs font-bold text-white hover:bg-blue-900 shadow-lg shadow-blue-900/20 transition-all hover:-translate-y-0.5"
+                    className={clsx(
+                        "flex items-center gap-1.5 rounded-xl bg-[#0a1e3b] px-6 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-900/20 transition-all tracking-wide uppercase",
+                        activeFillingField === "tier-next-btn" ? "ring-4 ring-blue-500/50 scale-105 shadow-2xl z-50" : "hover:bg-blue-900 hover:-translate-y-0.5"
+                    )}
                 >
                     Next <ChevronRight className="h-4 w-4" />
                 </button>
