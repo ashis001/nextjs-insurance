@@ -37,5 +37,6 @@ export const TIER_VOICE_MESSAGES = {
     SELECT_VOLUNTARY_PLAN: "Please include the 'High Cost Drugs' voluntary plan to complete the selection.",
 
     SAVING: "Perfect. All details are now set. Please click the 'Save' button below to finalize this tier configuration.",
+    SAVED_SUCCESSFULLY: "Tier details have been successfully saved! Returning to the management table.",
     COMPLETE: "Tier configuration is now complete! You can now proceed to the Setup Status section."
 };

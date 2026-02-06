@@ -809,18 +809,17 @@ export function TierEditorPanel({
                     });
 
                     // 7. Success message
-                    openChat(TIER_VOICE_MESSAGES.COMPLETE);
-                    await speakText(TIER_VOICE_MESSAGES.COMPLETE);
+                    const successMsg = TIER_VOICE_MESSAGES.SAVED_SUCCESSFULLY;
+                    openChat(successMsg);
+                    await speakText(successMsg);
 
-                    localStorage.removeItem("max_guide_step");
+                    await delay(1000);
 
                 } catch (e: any) {
                     if (e.message === "WorkflowCancelled") {
                         console.log("Tier Editor workflow cancelled");
                     }
                 } finally {
-                    // Always reset workflow state when guide completes
-                    setIsWorkflowActive(false);
                     hasStartedRef.current = false;
                 }
             };
