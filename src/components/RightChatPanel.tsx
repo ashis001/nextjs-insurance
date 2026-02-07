@@ -1065,13 +1065,13 @@ export default function RightChatPanel() {
                         type='button'
                         onClick={toggleListening}
                         className={clsx(
-                            "transition-all p-2.5 rounded-xl shadow-sm",
+                            "transition-all p-2.5 rounded-xl shadow-sm border",
                             isVoiceMode
-                                ? "text-red-500 bg-red-50 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)]"
-                                : "text-gray-500 hover:text-[#1e3a5f] hover:bg-gray-50"
+                                ? "bg-red-50 border-red-200 text-red-500 hover:bg-red-100 hover:text-red-600 hover:border-red-300 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse hover:animate-none"
+                                : "bg-transparent border-transparent text-gray-500 hover:text-[#1e3a5f] hover:bg-gray-50 hover:border-gray-200"
                         )}
                         title={isVoiceMode ? "Stop voice mode" : "Start voice mode"}>
-                        {isVoiceMode ? <MicOff size={20} /> : <Mic size={20} />}
+                        {isVoiceMode ? <X size={20} /> : <Mic size={20} />}
                     </button>
                     <input
                         type='text'
