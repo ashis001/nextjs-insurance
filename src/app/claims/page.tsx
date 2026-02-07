@@ -3,7 +3,7 @@
 import { Sidebar } from "../corporate-customers/[id]/_components/Sidebar";
 import {
     FileText, CheckCircle, Clock, Shield, DollarSign, Calendar,
-    Heart, Stethoscope, Eye, Activity, UploadCloud, ChevronRight, ChevronLeft, ArrowRight, Sparkles
+    Heart, Stethoscope, Eye, Activity, UploadCloud, ChevronRight, ChevronLeft, ArrowRight, Sparkles, Plus, Search, Filter, Info, X
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useChat } from "@/context/ChatContext";
@@ -42,7 +42,7 @@ export default function ClaimsPage() {
         isWorkflowActiveRef.current = isWorkflowActive;
     }, [isWorkflowPaused, isWorkflowActive]);
 
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(0);
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,19 +60,21 @@ export default function ClaimsPage() {
         diagnosis: ""
     });
 
+    const hasStartedRef = useRef(false);
+
     useEffect(() => {
         setMounted(true);
 
         const guideStep = localStorage.getItem("max_guide_step");
-        
-        
+
         // Handle the actual claims workflow (when already on the claims page)
-        if (guideStep === "claim_insurance") {
+        if (guideStep === "claim_insurance" && !hasStartedRef.current) {
+            hasStartedRef.current = true;
             const runGuide = async () => {
                 try {
                     setIsWorkflowActive(true);
                     isWorkflowActiveRef.current = true; // Sync ref immediately
-                    
+
                     const delay = async (ms: number) => {
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
                         await new Promise(resolve => setTimeout(resolve, ms));
@@ -85,22 +87,41 @@ export default function ClaimsPage() {
 
                     await delay(1000);
 
-                    // Step 1: Select Category
+                    // If we're on Step 0 (List View), we need to click "New Claim Request" first
+                    const addBtn = document.getElementById("add-claim-btn");
+                    if (addBtn && step === 0) {
+                        setActiveFillingField("add-claim-btn");
+                        await speakText("To file a new claim, let's click on New Claim Request.");
+                        await delay(2500);
+                        addBtn.click();
+                        await delay(1500); // Wait for popup animation to complete
+                        setActiveFillingField(null);
+                    }
+
+                    // Step 1: Select Category (now in popup)
                     const targetId = "category-health";
-                    const el = document.getElementById(targetId);
+                    // Loop until element exists (Wait for popup to appear)
+                    let el = document.getElementById(targetId);
+                    let attempts = 0;
+                    while (!el && attempts < 30) {
+                        await delay(100);
+                        el = document.getElementById(targetId);
+                        attempts++;
+                    }
+
                     if (el) {
                         setActiveFillingField(targetId);
-                        await speakText("To start your claim, first select a medical category. Let's choose Medical Health.");
+                        await speakText("Now, select a medical category. Let's choose Medical Health.");
                         // Wait for speech to complete before proceeding
-                        await delay(2500); // Increased delay to ensure speech completes
+                        await delay(2500);
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
-                        
+
                         // Click the element to trigger the selection
                         el.click();
-                        
+
                         // Wait for the UI to update
                         await delay(500);
-                        
+
                         setStep(2);
                         setActiveFillingField(null);
                     }
@@ -110,10 +131,10 @@ export default function ClaimsPage() {
                     // Step 2: Fill Form with enhanced guidance
                     const fillField = async (id: string, value: string, text: string) => {
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
-                        
+
                         // Highlight the field
                         setActiveFillingField(id);
-                        
+
                         const input = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement;
                         if (input) {
                             // Scroll to field if needed
@@ -122,27 +143,27 @@ export default function ClaimsPage() {
                                 input.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                 await delay(600); // Wait for scroll to complete
                             }
-                            
+
                             // Focus the input
                             input.focus({ preventScroll: true });
-                            
+
                             // Speak the instruction
                             await speakText(text);
-                            
+
                             // Wait a bit after speaking
                             await delay(800);
-                            
+
                             // Type the value character by character
                             let current = "";
                             for (const char of value) {
                                 if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
                                 current += char;
                                 setFormData(prev => ({ ...prev, [id]: current }));
-                                
+
                                 // Random typing delay for realism
                                 await delay(30 + Math.random() * 20);
                             }
-                            
+
                             // Wait after filling the field
                             await delay(600);
                         }
@@ -151,13 +172,13 @@ export default function ClaimsPage() {
                     // Fill each form field with proper delays
                     await fillField("provider", "City General Hospital", "Enter the name of your medical provider.");
                     await delay(500);
-                    
+
                     await fillField("date", "2026-02-01", "Select the date of service from your invoice.");
                     await delay(500);
-                    
+
                     await fillField("amount", "245.50", "Enter the total claim amount.");
                     await delay(500);
-                    
+
                     await fillField("diagnosis", "Regular checkup and flu vaccination.", "Briefly describe the reason for your visit.");
                     await delay(500);
 
@@ -167,44 +188,43 @@ export default function ClaimsPage() {
                         setActiveFillingField("next-step-btn");
                         await speakText("Great! I've prepared the details. Now click the 'Continue to Uploads' button to proceed.");
                         await delay(1000); // Wait for the speech to complete
-                        
+
                         // Click the button to move to the next step
                         nextBtn.click();
                     }
 
                     // Wait for the next step to load
                     await delay(1500);
-                    
+
                     // Wait for step to change to 3 (upload) by checking for the presence of upload elements
                     while (!document.getElementById("review-claim-btn") && isWorkflowActiveRef.current) {
                         await delay(100);
                     }
-                    
+
                     // Now handle the upload step if we're on step 3
                     if (document.getElementById("review-claim-btn") && isWorkflowActiveRef.current) {
                         // Highlight the upload area
-                        const uploadArea = document.querySelector('.border-dashed.border-blue-200');
+                        const uploadArea = document.getElementById("upload-area");
                         if (uploadArea) {
-                            // Since the upload area doesn't have an ID, we'll use a generic selector
-                            // For the workflow, we'll simulate an upload
-                            await delay(1000);
+                            setActiveFillingField("upload-area");
                             await speakText("Now you would upload your receipt or invoice here. For this demo, I'll simulate the upload process.");
-                            await delay(2000);
-                            
+                            await delay(3000); // Give user time to see the indicator
+
                             // Click the next button to move to review step
                             const nextBtn = document.getElementById("review-claim-btn");
                             if (nextBtn) {
+                                setActiveFillingField(null); // Clear before click
                                 nextBtn.click();
                             }
                         }
                     }
-                    
+
                     // Wait for step to change to 4 (review) by checking for the submit button
                     await delay(1500);
                     while (!document.getElementById("submit-claim-btn") && isWorkflowActiveRef.current) {
                         await delay(100);
                     }
-                    
+
                     // Handle the review step if we're on step 4
                     if (document.getElementById("submit-claim-btn") && isWorkflowActiveRef.current) {
                         const reviewBtn = document.getElementById("submit-claim-btn");
@@ -212,21 +232,21 @@ export default function ClaimsPage() {
                             setActiveFillingField("submit-claim-btn");
                             await speakText("Everything looks good. Now click the 'Submit Claim Request' button to finalize your claim.");
                             await delay(1000);
-                            
+
                             // Click the submit button
                             reviewBtn.click();
                         }
                     }
-                    
+
                     // Wait for submission
                     await delay(2000);
-                    
+
                     // Final message - only use openChat to avoid duplicate speech
                     openChat("Your claim has been submitted successfully! The claim ID is CLM-89210. You can track the status in the claims dashboard.");
-                    
+
                     // Wait a bit before deactivating workflow
                     await delay(2000); // Increased delay to ensure message is processed
-                    
+
                     // Only deactivate if workflow is still active
                     if (isWorkflowActiveRef.current) {
                         setIsWorkflowActive(false);
@@ -238,19 +258,19 @@ export default function ClaimsPage() {
                     } else {
                         console.error("Claims workflow error:", e);
                     }
-                    
+
                     // Cleanup in case of error
                     setActiveFillingField(null);
                     setIsWorkflowActive(false);
                 }
-                
+
                 // Clean up the guide step
                 localStorage.removeItem("max_guide_step");
             };
-            
+
             runGuide();
         }
-    }, []);
+    }, [openChat, setIsWorkflowActive]);
 
     // Pointer Sync
     useEffect(() => {
@@ -307,9 +327,9 @@ export default function ClaimsPage() {
     if (!mounted) return null;
 
     return (
-        <div className="flex min-h-screen bg-gradient-to-tr from-slate-200 via-indigo-50 to-blue-100 font-sans selection:bg-blue-600/10" ref={containerRef}>
+        <div className="flex min-h-screen bg-gradient-to-tr from-slate-200 via-indigo-50 to-blue-100 font-sans selection:bg-blue-600/10">
             <Sidebar />
-            <main className="flex-1 ml-64 relative overflow-hidden flex flex-col">
+            <main className="flex-1 ml-64 relative overflow-hidden flex flex-col" ref={containerRef}>
                 <AnimatedGrid />
 
                 {/* Pointer Indicator */}
@@ -338,25 +358,15 @@ export default function ClaimsPage() {
                 {/* Premium Header */}
                 <header className="relative z-20 flex h-20 items-center justify-between border-b border-slate-200/60 bg-white/70 backdrop-blur-md px-8">
                     <div className="flex flex-col">
-                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">New Claim Request</h1>
-                        <p className="text-xs text-slate-500 font-medium">Submit and track reimbursement requests</p>
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+                            {step === 0 ? "Claims Requests" : "New Claim Request"}
+                        </h1>
+                        <p className="text-xs text-slate-500 font-medium">
+                            {step === 0 ? "Manage and track all reimbursement requests" : "Submit and track reimbursement requests"}
+                        </p>
                     </div>
 
                     <div className="flex items-center gap-6">
-                        {step < 5 && (
-                            <div className="flex items-center gap-2 mr-4">
-                                {[1, 2, 3, 4].map((s) => (
-                                    <div key={s} className="flex items-center">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${step >= s ? 'bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20' : 'bg-white text-slate-300 border border-slate-200'
-                                            }`}>
-                                            {step > s ? <CheckCircle className="w-4 h-4" /> : s}
-                                        </div>
-                                        {s < 4 && <div className={`w-8 h-1 rounded-full mx-1 transition-colors duration-300 ${step > s ? 'bg-blue-600' : 'bg-slate-200'}`} />}
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={toggleChat}
@@ -368,38 +378,110 @@ export default function ClaimsPage() {
                     </div>
                 </header>
 
-                <div className="relative z-10 p-8 flex-1 flex flex-col items-center justify-center overflow-y-auto animate-fade-in">
+                <div className={`relative z-10 p-8 flex-1 flex flex-col items-center ${step === 0 ? 'justify-start' : 'justify-center'} overflow-y-auto animate-fade-in`}>
 
-                    {/* STEP 1: Select Insurance Type */}
-                    {step === 1 && (
-                        <div className="w-full max-w-5xl animate-slide-up">
-                            <h2 className="text-3xl font-black text-slate-900 text-center mb-2">What are you claiming for?</h2>
-                            <p className="text-slate-500 text-center mb-10 font-medium">Select the category that best fits your medical service</p>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {INSURANCE_TYPES.map((type) => (
-                                    <div
-                                        key={type.id}
-                                        id={`category-${type.id}`}
-                                        onClick={() => { setSelectedType(type.id); setStep(2); }}
-                                        className="group bg-white/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer relative overflow-hidden"
-                                    >
-
-                                        <div className={`w-14 h-14 rounded-2xl bg-${type.color}-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500`}>
-                                            <type.icon className={`w-7 h-7 text-${type.color}-600`} />
+                    {/* STEP 0: Claims Listing Table */}
+                    {step === 0 && (
+                        <div className="w-full max-w-7xl space-y-6">
+                            <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-slate-300 shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden">
+                                <div className="bg-[#0a1e3b] px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md">
+                                                <FileText className="w-4 h-4 text-blue-400" />
+                                            </div>
+                                            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Submitted Claims</h3>
                                         </div>
-
-                                        <h3 className="text-lg font-bold text-slate-900 mb-2">{type.title}</h3>
-                                        <p className="text-xs text-slate-500 font-medium leading-relaxed">{type.description}</p>
-
-                                        <div className="mt-6 flex items-center text-blue-600 font-bold text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 -translate-x-2 group-hover:translate-x-0">
-                                            Select Category <ArrowRight className="w-3 h-3 ml-1" />
-                                        </div>
+                                        <span className="text-[9px] font-black text-blue-200 uppercase tracking-widest bg-white/5 px-2.5 py-1 rounded-full border border-white/5">4 Total</span>
                                     </div>
-                                ))}
+
+                                    <div className="flex flex-col md:flex-row items-center gap-4">
+                                        <div className="relative group w-48 md:w-64">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-blue-200 group-focus-within:text-white transition-colors" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search claims..."
+                                                className="w-full bg-white/10 rounded-xl border border-white/10 pl-10 pr-4 py-2 text-[11px] font-bold text-white placeholder:text-blue-200/50 focus:bg-white/20 focus:outline-none transition-all"
+                                            />
+                                        </div>
+
+                                        <button
+                                            id="add-claim-btn"
+                                            onClick={() => setStep(1)}
+                                            className="group flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-[11px] font-black text-white hover:bg-blue-500 shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 hover:-translate-y-0.5 transition-all duration-300 uppercase tracking-wider whitespace-nowrap"
+                                        >
+                                            <Plus className="h-3.5 w-3.5 group-hover:rotate-90 transition-transform" />
+                                            New Claim Request
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white">
+                                    <table className="w-full text-left text-sm">
+                                        <thead>
+                                            <tr className="border-b border-slate-100 bg-slate-50/50">
+                                                <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500">Claim Category</th>
+                                                <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500">Claim ID</th>
+                                                <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500">Submitted At</th>
+                                                <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500 text-center">Amount</th>
+                                                <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500 text-center">Status</th>
+                                                <th className="px-6 py-4 font-bold text-[10px] uppercase tracking-widest text-slate-500 text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {[
+                                                { id: 'CLM-89210', category: 'Medical Health', date: 'Feb 7, 2026 17:20', amount: '$245.50', status: 'Processing' },
+                                                { id: 'CLM-89105', category: 'Dental Care', date: 'Feb 5, 2026 10:15', amount: '$120.00', status: 'Paid' },
+                                                { id: 'CLM-88992', category: 'Vision Coverage', date: 'Feb 1, 2026 14:30', amount: '$350.00', status: 'Paid' },
+                                                { id: 'CLM-88845', category: 'Wellness', date: 'Jan 28, 2026 09:45', amount: '$75.00', status: 'Rejected' },
+                                            ].map((claim, idx) => (
+                                                <tr key={idx} className="group hover:bg-slate-50 transition-colors duration-200">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${claim.category.includes('Medical') ? 'bg-rose-50 text-rose-600' :
+                                                                claim.category.includes('Dental') ? 'bg-blue-50 text-blue-600' :
+                                                                    claim.category.includes('Vision') ? 'bg-emerald-50 text-emerald-600' :
+                                                                        'bg-amber-50 text-amber-600'
+                                                                }`}>
+                                                                {claim.category.charAt(0)}
+                                                            </div>
+                                                            <span className="text-xs font-bold text-slate-900">{claim.category}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-xs font-mono font-black text-blue-600">{claim.id}</td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-bold text-slate-700">{claim.date.split(',')[0]}</span>
+                                                            <span className="text-[10px] font-bold text-slate-400">{claim.date.split(' ')[2]} {claim.date.split(' ')[3]}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center font-bold text-xs text-slate-900">{claim.amount}</td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${claim.status === 'Processing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                            claim.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                                'bg-rose-50 text-rose-700 border-rose-100'
+                                                            }`}>
+                                                            {claim.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                                                                <Info size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
+
+
+                    {/* STEP 2: Claim Details Form */}
 
                     {/* STEP 2: Claim Details Form */}
                     {step === 2 && (
@@ -487,7 +569,7 @@ export default function ClaimsPage() {
                                 </div>
                             </div>
 
-                            <div className="border-2 border-dashed border-blue-200 rounded-2xl bg-blue-50/50 p-12 flex flex-col items-center justify-center text-center group hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 cursor-pointer">
+                            <div id="upload-area" className="border-2 border-dashed border-blue-200 rounded-2xl bg-blue-50/50 p-12 flex flex-col items-center justify-center text-center group hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 cursor-pointer relative">
                                 <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-500 mb-4 group-hover:scale-110 transition-transform duration-300">
                                     <UploadCloud className="w-8 h-8" />
                                 </div>
@@ -621,7 +703,67 @@ export default function ClaimsPage() {
                                 </div>
                             </div>
 
-                            <button onClick={() => setStep(1)} className="mt-8 mx-auto block text-slate-400 hover:text-slate-600 text-xs font-bold uppercase tracking-wider transition-colors">
+                            {/* Recent Claims Table for Demo */}
+                            <div className="mt-8 bg-white/90 backdrop-blur-xl rounded-3xl border border-slate-300 shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden animate-slide-up" style={{ animationDelay: '0.4s' }}>
+                                <div className="px-8 py-5 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
+                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Recent Claim History</h3>
+                                    <span className="text-[10px] font-bold text-slate-500 bg-slate-200/50 px-2 py-1 rounded-md">Showing latest 3 requests</span>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="bg-slate-50/80">
+                                                <th className="px-8 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Category</th>
+                                                <th className="px-8 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Claim ID</th>
+                                                <th className="px-8 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Submitted At</th>
+                                                <th className="px-8 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Status</th>
+                                                <th className="px-8 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {[
+                                                { id: 'CLM-89210', category: 'Medical Health', date: 'Feb 7, 2026 17:20', status: 'Processing', color: 'blue' },
+                                                { id: 'CLM-89105', category: 'Dental Care', date: 'Feb 5, 2026 10:15', status: 'Paid', color: 'green' },
+                                                { id: 'CLM-88992', category: 'Vision Coverage', date: 'Feb 1, 2026 14:30', status: 'Paid', color: 'green' },
+                                            ].map((claim, idx) => (
+                                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                                                    <td className="px-8 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${claim.category.includes('Medical') ? 'bg-rose-50 text-rose-600' :
+                                                                claim.category.includes('Dental') ? 'bg-blue-50 text-blue-600' :
+                                                                    'bg-emerald-50 text-emerald-600'
+                                                                }`}>
+                                                                {claim.category.charAt(0)}
+                                                            </div>
+                                                            <span className="text-xs font-bold text-slate-900">{claim.category}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-4 font-mono text-xs font-black text-blue-600">{claim.id}</td>
+                                                    <td className="px-8 py-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-bold text-slate-700">{claim.date.split(' ')[0]} {claim.date.split(' ')[1]}</span>
+                                                            <span className="text-[10px] font-bold text-slate-400">{claim.date.split(' ')[2]}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-4">
+                                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${claim.status === 'Processing'
+                                                            ? 'bg-blue-100 text-blue-700 border border-blue-200/50'
+                                                            : 'bg-green-100 text-green-700 border border-green-200/50'
+                                                            }`}>
+                                                            {claim.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-4 text-right">
+                                                        <button className="text-xs font-black text-slate-400 group-hover:text-blue-600 transition-colors uppercase tracking-widest">View Details</button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <button onClick={() => setStep(1)} className="mt-12 mx-auto block text-slate-400 hover:text-slate-600 text-xs font-bold uppercase tracking-wider transition-colors hover:scale-110 active:scale-95 duration-200">
                                 Start Another Claim
                             </button>
                         </div>
@@ -629,14 +771,96 @@ export default function ClaimsPage() {
 
                 </div>
             </main>
+
+            {/* STEP 1: Select Insurance Type popup - Rendered outside main for full viewport coverage */}
+            {step === 1 && (
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/60 backdrop-blur animate-nina-fade-in px-8">
+                    <div className="bg-white rounded-[40px] shadow-[0_32px_80px_rgba(0,0,0,0.4)] border border-slate-200 w-full max-w-5xl relative animate-nina-scale-in overflow-hidden">
+
+                        {/* Professional Theme Header */}
+                        <div className="bg-[#0a1e3b] px-8 py-5 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-md">
+                                    <Sparkles className="w-4 h-4 text-blue-400" />
+                                </div>
+                                <h2 className="text-xs font-black text-white uppercase tracking-[0.2em]">New Claim Category</h2>
+                            </div>
+                            <button
+                                onClick={() => setStep(0)}
+                                className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all text-white/50 hover:text-white"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-12 animate-nina-fade-in-up">
+                            <div className="text-center mb-12">
+                                <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">What are you claiming for?</h3>
+                                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Select your medical service category</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {INSURANCE_TYPES.map((type) => (
+                                    <div
+                                        key={type.id}
+                                        id={`category-${type.id}`}
+                                        onClick={() => { setSelectedType(type.id); setStep(2); }}
+                                        className="group bg-white p-8 rounded-[32px] border border-slate-300 hover:border-blue-500 shadow-md hover:shadow-2xl hover:shadow-blue-900/10 hover:-translate-y-1.5 transition-all duration-500 cursor-pointer relative"
+                                    >
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500
+                                            ${type.color === 'rose' ? 'bg-rose-50 text-rose-600' :
+                                                type.color === 'blue' ? 'bg-blue-50 text-blue-600' :
+                                                    type.color === 'emerald' ? 'bg-emerald-50 text-emerald-600' :
+                                                        'bg-amber-50 text-amber-600'}`}
+                                        >
+                                            <type.icon className="w-7 h-7" />
+                                        </div>
+
+                                        <h4 className="text-lg font-black text-slate-900 mb-1 tracking-tight">{type.title}</h4>
+                                        <p className="text-[11px] text-slate-500 font-bold leading-relaxed">{type.description}</p>
+
+                                        <div className="mt-8 flex items-center text-blue-600 font-black text-[9px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
+                                            Start Claim <ArrowRight className="w-3 h-3 ml-2" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Decorative Pattern */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full blur-[100px] pointer-events-none" />
+                    </div>
+                </div>
+            )}
+
             <style jsx global>{`
-                @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes nina-fade-in { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes nina-scale-in {
+                    from { transform: translateY(30px) scale(0.9); opacity: 0; }
+                    to { transform: translateY(0) scale(1); opacity: 1; }
+                }
+                @keyframes nina-fade-in-up {
+                    from { transform: translateY(15px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+
+                .animate-nina-fade-in { animation: nina-fade-in 0.6s ease-out forwards; }
+                .animate-nina-scale-in { animation: nina-scale-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+                .animate-nina-fade-in-up { 
+                    animation: nina-fade-in-up 0.8s ease-out 0.2s forwards; 
+                    opacity: 0;
+                }
+
+                @keyframes nina-pointer-float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-8px); }
+                }
+                .animate-nina-pointer-float { animation: nina-pointer-float 1.5s ease-in-out infinite; }
                 @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-                @keyframes card-entrance { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-                @keyframes grow-bar { from { width: 0%; } to { width: 35%; } }
-                .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
                 .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+                @keyframes card-entrance { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
                 .animate-card-entrance { animation: card-entrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+                @keyframes grow-bar { from { width: 0%; } to { width: 35%; } }
                 .animate-grow-bar { animation: grow-bar 2s ease-out forwards; }
             `}</style>
         </div>
