@@ -76,6 +76,8 @@ export default function RightChatPanel() {
     const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const transcriptRef = useRef("");
     const isVoiceModeRef = useRef(false); // Using ref for immediate sync in callbacks
+    const isSpeakingRef = useRef(false);
+    const isListeningRef = useRef(false);
     const [isTyping, setIsTyping] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
     const isResizingRef = useRef(false);
@@ -83,6 +85,15 @@ export default function RightChatPanel() {
     const isInterruptedRef = useRef(false);
     const activeMessageTextRef = useRef<string | null>(null);
     const [guideTargetRect, setGuideTargetRect] = useState<{ top: number, left: number, width: number, height: number } | null>(null);
+
+    // Sync refs for async callbacks
+    useEffect(() => {
+        isSpeakingRef.current = isSpeaking;
+    }, [isSpeaking]);
+
+    useEffect(() => {
+        isListeningRef.current = isListening;
+    }, [isListening]);
 
     // Helper to check and request microphone permissions
     const checkMicrophonePermission = async (): Promise<boolean> => {
@@ -144,6 +155,7 @@ export default function RightChatPanel() {
 
                 recognitionRef.current.onend = () => {
                     setIsListening(false);
+                    isListeningRef.current = false;
                     // If silenceTimerRef.current is still set, it means we stopped before the 2.5s timer fired
                     // (e.g. manual stop or system timeout). In this case, we should send the transcript.
                     if (silenceTimerRef.current) {
@@ -191,6 +203,7 @@ export default function RightChatPanel() {
                     }
 
                     setIsListening(false);
+                    isListeningRef.current = false;
                     if (shouldStopVoiceMode) {
                         setIsVoiceMode(false);
                         isVoiceModeRef.current = false;
@@ -204,6 +217,7 @@ export default function RightChatPanel() {
         if (isListening || isVoiceMode) {
             recognitionRef.current?.stop();
             setIsListening(false);
+            isListeningRef.current = false;
             setIsVoiceMode(false);
             isVoiceModeRef.current = false;
             stopSpeech();
@@ -227,6 +241,7 @@ export default function RightChatPanel() {
                         setInputValue("");
                         recognitionRef.current?.start();
                         setIsListening(true);
+                        isListeningRef.current = true;
                         setIsVoiceMode(true);
                         isVoiceModeRef.current = true;
                     } catch (err: any) {
@@ -236,6 +251,7 @@ export default function RightChatPanel() {
                         } else {
                             // If already started, just update UI
                             setIsListening(true);
+                            isListeningRef.current = true;
                             setIsVoiceMode(true);
                             isVoiceModeRef.current = true;
                         }
@@ -259,15 +275,18 @@ export default function RightChatPanel() {
     const speakWithIndicator = async (text: string) => {
         try {
             // Stop listening before speaking to prevent state conflicts
-            if (isListening) {
+            if (isListeningRef.current) {
                 recognitionRef.current?.stop();
                 setIsListening(false);
+                isListeningRef.current = false;
             }
 
             setIsSpeaking(true);
+            isSpeakingRef.current = true;
             await speakText(text);
         } finally {
             setIsSpeaking(false);
+            isSpeakingRef.current = false;
         }
     };
 
@@ -317,13 +336,14 @@ export default function RightChatPanel() {
         if (isVoiceModeRef.current && !isInterruptedRef.current) {
             setTimeout(() => {
                 try {
-                    // Prevent multiple starts
-                    if (isListening || isSpeaking) return;
+                    // Prevent multiple starts - using refs to avoid stale state
+                    if (isListeningRef.current || isSpeakingRef.current) return;
 
                     transcriptRef.current = "";
                     setInputValue("");
                     recognitionRef.current?.start();
                     setIsListening(true);
+                    isListeningRef.current = true;
                 } catch (err: any) {
                     console.error("Auto-mic start failed:", err);
                     // Only retry if it's not a permission issue and was previously active
@@ -331,9 +351,10 @@ export default function RightChatPanel() {
                     if (isVoiceModeRef.current && !isPermissionError) {
                         setTimeout(() => {
                             try {
-                                if (!isListening && !isSpeaking) {
+                                if (!isListeningRef.current && !isSpeakingRef.current) {
                                     recognitionRef.current?.start();
                                     setIsListening(true);
+                                    isListeningRef.current = true;
                                 }
                             } catch (e) {
                                 console.log("Retry also failed, keeping voice mode but mic inactive");
@@ -562,6 +583,7 @@ export default function RightChatPanel() {
             // Ignore stop errors
         }
         setIsListening(false);
+        isListeningRef.current = false;
 
         stopSpeech();
         isInterruptedRef.current = true; // Stop any ongoing stream
