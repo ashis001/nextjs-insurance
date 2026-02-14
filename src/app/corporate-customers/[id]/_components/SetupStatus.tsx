@@ -112,6 +112,10 @@ export function SetupStatus({ engine }: { engine: ReturnType<typeof useCorporate
                         // Use silent mode to prevent the Chat Panel from triggering a second voice call
                         openChat(text, true);
                         await speakText(text);
+                        if (isWorkflowPausedRef.current) {
+                            await delay(0);
+                            await speakText(text);
+                        }
                     } else if (text && isMuted) {
                         await delay(1000);
                     }

@@ -96,12 +96,21 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
                     };
 
+                    const speak = async (text: string) => {
+                        if (!text) return;
+                        await speakText(text);
+                        if (isWorkflowPausedRef.current) {
+                            await delay(0);
+                            await speakText(text);
+                        }
+                    };
+
                     await delay(1200);
                     setActiveFillingField("add-tier-btn");
 
                     // Display text in Chat UI and trigger manual speech (to prevent repetition)
                     openChat(TIER_VOICE_MESSAGES.WELCOME_AND_ADD, true);
-                    await speakText(TIER_VOICE_MESSAGES.WELCOME_AND_ADD);
+                    await speak(TIER_VOICE_MESSAGES.WELCOME_AND_ADD);
 
                     // Professional pause after speech completes - increased to ensure full sentence inclusion
                     await delay(6000);
@@ -142,13 +151,22 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
                     };
 
+                    const speak = async (text: string) => {
+                        if (!text) return;
+                        await speakText(text);
+                        if (isWorkflowPausedRef.current) {
+                            await delay(0);
+                            await speakText(text);
+                        }
+                    };
+
                     // Welcome message for continued workflow
                     await delay(1200);
                     setActiveFillingField("add-tier-btn");
 
                     // Display text in Chat UI and trigger manual speech (to prevent repetition)
                     openChat(TIER_VOICE_MESSAGES.WELCOME_AND_ADD, true);
-                    await speakText(TIER_VOICE_MESSAGES.WELCOME_AND_ADD);
+                    await speak(TIER_VOICE_MESSAGES.WELCOME_AND_ADD);
 
                     // Professional pause after speech completes - increased to ensure full sentence inclusion
                     await delay(6000);
@@ -181,6 +199,25 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
             finalStepStartedRef.current = true;
             const runFinalStep = async () => {
                 try {
+                    const delay = async (ms: number) => {
+                        if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                        await new Promise(resolve => setTimeout(resolve, ms));
+                        while (isWorkflowPausedRef.current) {
+                            if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                        if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
+                    };
+
+                    const speak = async (text: string) => {
+                        if (!text) return;
+                        await speakText(text);
+                        if (isWorkflowPausedRef.current) {
+                            await delay(0);
+                            await speakText(text);
+                        }
+                    };
+
                     await delay(1000);
 
                     // Highlight the "Next" button FIRST to show where we are going
@@ -202,7 +239,7 @@ export function TierTable({ engine }: { engine: ReturnType<typeof useCorporateEn
                     // Display text in Chat UI and trigger manual speech (to prevent repetition)
                     const msg = TIER_VOICE_MESSAGES.COMPLETE;
                     openChat(msg, true);
-                    await speakText(msg);
+                    await speak(msg);
 
                     // Professional pause after speech finishes so it doesn't feel rushed
                     await delay(6000);

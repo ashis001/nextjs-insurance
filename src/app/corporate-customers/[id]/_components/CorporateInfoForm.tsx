@@ -239,6 +239,17 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
                     };
 
+                    const speak = async (text: string) => {
+                        if (!text) return;
+                        // Use silent mode to prevent the Chat Panel from triggering a second voice call
+                        openChat(text, true);
+                        await speakText(text);
+                        if (isWorkflowPausedRef.current) {
+                            await delay(0);
+                            await speakText(text);
+                        }
+                    };
+
                     // 1. Auto-fill data sequentially (Simulating user input)
                     const fillField = async (field: any, value: any, isLast: boolean = false) => {
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
@@ -263,7 +274,7 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                             if (el) el.focus({ preventScroll: true });
 
                             // Professional Voice-Over - AWAIT completion
-                            await speakText(VOICE_MESSAGES[field]);
+                            await speak(VOICE_MESSAGES[field]);
 
                             // Wait a moment for visual focus to sink in before typing/selecting
                             await delay(200);
@@ -362,13 +373,13 @@ export function CorporateInfoForm({ engine }: { engine: ReturnType<typeof useCor
                     setActiveFillingField("submit-button");
 
                     // Wait for speech to finish completely
-                    await speakText(finalMsg);
+                    await speak(finalMsg);
 
                     // Professional pause after speech finishes
                     await new Promise(resolve => setTimeout(resolve, 2000));
 
                     // Navigate now that speech is done
-                    if (isWorkflowActiveRef.current || !isWorkflowActiveRef.current) {
+                    if (isWorkflowActiveRef.current) {
                         localStorage.setItem("max_guide_step", "tier_config");
                         handleSubmit(onSubmit)();
                     }

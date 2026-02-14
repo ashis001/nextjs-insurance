@@ -314,6 +314,15 @@ export function TierEditorPanel({
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
                     };
 
+                    const speak = async (text: string) => {
+                        if (!text) return;
+                        await speakText(text);
+                        if (isWorkflowPausedRef.current) {
+                            await delay(0);
+                            await speakText(text);
+                        }
+                    };
+
                     // Helper to type text into input
                     const typeText = async (fieldName: string, text: string) => {
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
@@ -375,7 +384,7 @@ export function TierEditorPanel({
 
                         // 3. Professional Speech Timing - EXACTLY like the form page
                         // Speak FIRST and await completion before any action
-                        await speakText(config.speech);
+                        await speak(config.speech);
 
                         // Brief pause after speech for visual poise
                         await delay(500);
