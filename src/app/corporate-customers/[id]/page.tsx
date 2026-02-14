@@ -77,20 +77,20 @@ export default function CorporatePage({ params }: { params: { id: string } }) {
                 {/* Tabs Bar - Relative flow */}
                 <div className="relative z-40 px-8 py-4 transition-all duration-300">
                     <div className="flex p-1 bg-white/50 backdrop-blur-md border border-slate-200/60 rounded-xl w-fit shadow-sm pointer-events-auto">
-                        <button className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all duration-300 ${activeStage === "CORPORATE_INFO" ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
-                            <Globe className="w-3.5 h-3.5" />
+                        <button className={`flex items-center gap-2 px-6 py-3 rounded-lg text-xs font-black uppercase tracking-wide transition-all duration-300 ${activeStage === "CORPORATE_INFO" ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
+                            <Globe className="w-5 h-5" />
                             Corporate Info
                         </button>
-                        <button className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all duration-300 ${activeStage === "TIERS" ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
-                            <Shield className="w-3.5 h-3.5" />
+                        <button className={`flex items-center gap-2 px-6 py-3 rounded-lg text-xs font-black uppercase tracking-wide transition-all duration-300 ${activeStage === "TIERS" ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
+                            <Shield className="w-5 h-5" />
                             Tiers Config
                         </button>
-                        <button className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all duration-300 ${activeStage === "SETUP_STATUS" ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
-                            <Settings className="w-3.5 h-3.5" />
+                        <button className={`flex items-center gap-2 px-6 py-3 rounded-lg text-xs font-black uppercase tracking-wide transition-all duration-300 ${activeStage === "SETUP_STATUS" ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
+                            <Settings className="w-5 h-5" />
                             Setup Status
                         </button>
-                        <button className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wide transition-all duration-300 ${activeStage === "OVERVIEW" ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
-                            <Layout className="w-3.5 h-3.5" />
+                        <button className={`flex items-center gap-2 px-6 py-3 rounded-lg text-xs font-black uppercase tracking-wide transition-all duration-300 ${activeStage === "OVERVIEW" ? "bg-[#0a1e3b] text-white shadow-lg shadow-blue-900/20" : "text-slate-500 hover:text-slate-700 hover:bg-white/50"}`}>
+                            <Layout className="w-5 h-5" />
                             Overview
                         </button>
                     </div>

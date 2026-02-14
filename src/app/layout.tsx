@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   title: "Max Insurance - Corporate Admin Platform",
   description:
     "Enterprise-grade SaaS Admin Platform for Corporate Benefits Management",
+  icons: {
+    icon: "/max.png",
+    shortcut: "/max.png",
+    apple: "/max.png",
+  },
 };
 
 export default function RootLayout({

@@ -148,8 +148,8 @@ export default function LoginPage() {
 
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-12">
-              <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/20 shadow-lg">
-                <Shield className="w-5 h-5 text-blue-400" />
+              <div className="w-10 h-10 flex items-center justify-center">
+                <img src="/max.png" alt="Max Logo" className="w-full h-full object-contain" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white tracking-tight">Max Insurance</h1>
