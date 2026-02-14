@@ -84,6 +84,14 @@ export default function ClaimsPage() {
                         }
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
                     };
+                    const speak = async (text: string) => {
+                        if (!text) return;
+                        await speakText(text);
+                        if (isWorkflowPausedRef.current) {
+                            await delay(0);
+                            await speakText(text);
+                        }
+                    };
 
                     await delay(1000);
 
@@ -91,7 +99,7 @@ export default function ClaimsPage() {
                     const addBtn = document.getElementById("add-claim-btn");
                     if (addBtn && step === 0) {
                         setActiveFillingField("add-claim-btn");
-                        await speakText("To file a new claim, let's click on New Claim Request.");
+                        await speak("To file a new claim, let's click on New Claim Request.");
                         await delay(2500);
                         addBtn.click();
                         await delay(1500); // Wait for popup animation to complete
@@ -111,7 +119,7 @@ export default function ClaimsPage() {
 
                     if (el) {
                         setActiveFillingField(targetId);
-                        await speakText("Now, select a medical category. Let's choose Medical Health.");
+                        await speak("Now, select a medical category. Let's choose Medical Health.");
                         // Wait for speech to complete before proceeding
                         await delay(2500);
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
@@ -148,7 +156,7 @@ export default function ClaimsPage() {
                             input.focus({ preventScroll: true });
 
                             // Speak the instruction
-                            await speakText(text);
+                            await speak(text);
 
                             // Wait a bit after speaking
                             await delay(800);
@@ -186,7 +194,7 @@ export default function ClaimsPage() {
                     const nextBtn = document.getElementById("next-step-btn");
                     if (nextBtn) {
                         setActiveFillingField("next-step-btn");
-                        await speakText("Great! I've prepared the details. Now click the 'Continue to Uploads' button to proceed.");
+                        await speak("Great! I've prepared the details. Now click the 'Continue to Uploads' button to proceed.");
                         await delay(1000); // Wait for the speech to complete
 
                         // Click the button to move to the next step
@@ -207,7 +215,7 @@ export default function ClaimsPage() {
                         const uploadArea = document.getElementById("upload-area");
                         if (uploadArea) {
                             setActiveFillingField("upload-area");
-                            await speakText("Now you would upload your receipt or invoice here. For this demo, I'll simulate the upload process.");
+                            await speak("Now you would upload your receipt or invoice here. For this demo, I'll simulate the upload process.");
                             await delay(3000); // Give user time to see the indicator
 
                             // Click the next button to move to review step
@@ -230,7 +238,7 @@ export default function ClaimsPage() {
                         const reviewBtn = document.getElementById("submit-claim-btn");
                         if (reviewBtn) {
                             setActiveFillingField("submit-claim-btn");
-                            await speakText("Everything looks good. Now click the 'Submit Claim Request' button to finalize your claim.");
+                            await speak("Everything looks good. Now click the 'Submit Claim Request' button to finalize your claim.");
                             await delay(1000);
 
                             // Click the submit button

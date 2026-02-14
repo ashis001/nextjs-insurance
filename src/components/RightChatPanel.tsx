@@ -884,7 +884,11 @@ export default function RightChatPanel() {
                     {isWorkflowActive && (
                         <button
                             onClick={() => {
-                                setIsWorkflowPaused(!isWorkflowPaused);
+                                const nextPausedState = !isWorkflowPaused;
+                                setIsWorkflowPaused(nextPausedState);
+                                if (nextPausedState) {
+                                    stopSpeech();
+                                }
                             }}
                             className='p-2 rounded-full transition-all text-gray-400 hover:bg-gray-50'
                             title={isWorkflowPaused ? "Resume Workflow" : "Stop Workflow"}
