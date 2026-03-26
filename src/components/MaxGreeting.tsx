@@ -64,7 +64,7 @@ export default function MaxGreeting() {
                     <img
                         alt="Cloye AI"
                         src="https://cdnstaticfiles.blob.core.windows.net/img/1770617819808_cloye-agent-face.jpg"
-                        // src="https://cdnstaticfiles.blob.core.windows.net/cdnstaticfiles/agent_images/nina.jpeg"
+                        // src="https://cdnstaticfiles.blob.core.windows.net/cdnstaticfiles/agent_images/Cloye.jpeg"
                         className="w-full h-full object-cover object-top"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/0 to-transparent" />

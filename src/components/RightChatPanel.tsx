@@ -37,6 +37,13 @@ interface Message {
     actions?: { label: string; value: string }[];
 }
 
+interface ChatSession {
+    id: string;
+    title: string;
+    messages: Message[];
+    timestamp: string;
+}
+
 export default function RightChatPanel() {
     const router = useRouter();
     const {
@@ -56,6 +63,7 @@ export default function RightChatPanel() {
         isExpanded,
         setIsExpanded
     } = useChat();
+    const [history, setHistory] = useState<ChatSession[]>([]);
     const [inputValue, setInputValue] = useState("");
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isListening, setIsListening] = useState(false);
@@ -376,6 +384,22 @@ export default function RightChatPanel() {
         }
     };
 
+    const triggerGreeting = async () => {
+        isInterruptedRef.current = false;
+        const secondMsg = "What would you like to do today? I can help you to onboard a new company or file a claim or onboard a new policy provider.";
+        const thirdMsg = "You can talk to or you can type text here.";
+        
+        const timer = setTimeout(async () => {
+            if (!isInterruptedRef.current) {
+                await streamMessage(secondMsg, "assistant");
+            }
+            if (!isInterruptedRef.current) {
+                await streamMessage(thirdMsg, "assistant");
+            }
+        }, 1000);
+        return () => clearTimeout(timer);
+    };
+
     // Handle Entry Logic (Popup vs Top Bar)
     useEffect(() => {
         if (isOpen) {
@@ -411,12 +435,11 @@ export default function RightChatPanel() {
                         await new Promise(resolve => setTimeout(resolve, 100));
                     }
 
-                    // 1st Visible Streamed Message: The trigger message
+                    // 1st Visible Streamed Message (or silent insertion)
                     const isSilent = externalMessage.startsWith("SILENT:");
                     const actualMessage = isSilent ? externalMessage.slice(7) : externalMessage;
 
                     if (isSilent) {
-                        // Stream without speech animation
                         const id = Date.now().toString();
                         setMessages(prev => [...prev, {
                             id,
@@ -432,42 +455,23 @@ export default function RightChatPanel() {
                             await new Promise(resolve => setTimeout(resolve, 80));
                         }
                     } else {
-                        await streamMessage(externalMessage, "assistant");
+                        await streamMessage(actualMessage, "assistant");
                     }
 
-                    // If it was the standard "Hi I'm Cloye", we follow up with the Question + Tips
                     if (isStandardGreeting) {
-                        if (!isInterruptedRef.current) {
-                            await streamMessage(secondMsg, "assistant");
-                        }
-                        if (!isInterruptedRef.current) {
-                            await streamMessage(thirdMsg, "assistant");
-                        }
-                    }
-                    // If it was ALREADY the Question (from popup), we just follow up with the Tips
-                    else if (isIntroQuestion) {
-                        if (!isInterruptedRef.current) {
-                            await streamMessage(thirdMsg, "assistant");
-                        }
+                        if (!isInterruptedRef.current) await streamMessage(secondMsg, "assistant");
+                        if (!isInterruptedRef.current) await streamMessage(thirdMsg, "assistant");
+                    } else if (isIntroQuestion) {
+                        if (!isInterruptedRef.current) await streamMessage(thirdMsg, "assistant");
                     }
 
                     clearExternalMessage();
                 }, 500);
                 return () => clearTimeout(timer);
             }
-            // CASE B: Opened via Popup (No externalMessage, initial state only)
+            // CASE B: Opened via Popup (initial state)
             else if (messages.length === 1 && messages[0].id === "1") {
-                const timer = setTimeout(async () => {
-                    // 2nd Message
-                    if (!isInterruptedRef.current) {
-                        await streamMessage(secondMsg, "assistant");
-                    }
-                    // 3rd Message
-                    if (!isInterruptedRef.current) {
-                        await streamMessage(thirdMsg, "assistant");
-                    }
-                }, 1000);
-                return () => clearTimeout(timer);
+                triggerGreeting();
             }
         }
     }, [externalMessage, isOpen, clearExternalMessage]);
@@ -492,6 +496,54 @@ export default function RightChatPanel() {
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    const resetChat = () => {
+        isInterruptedRef.current = true;
+        stopSpeech();
+        setMessages([
+            {
+                id: "1",
+                text: "Hi, I'm **Cloye**. Your Assistant. Ask me anything",
+                sender: "assistant",
+                timestamp: new Date().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                }),
+            },
+        ]);
+        setCloyeStep(0);
+        setPendingContext(null);
+        setInputValue("");
+        setIsTyping(false);
+        
+        // Trigger the vocal greeting sequence
+        triggerGreeting();
+    };
+
+    const createNewSession = () => {
+        // Only save if user has sent messages
+        const userMsgs = messages.filter(m => m.sender === "user");
+        if (userMsgs.length > 0) {
+            const firstMsgText = userMsgs[0].text;
+            const title = firstMsgText.length > 30 ? firstMsgText.substring(0, 30) + "..." : firstMsgText;
+            
+            // Capture the current messages in a local variable to be safe
+            const currentMessages = [...messages];
+            
+            setHistory(prev => [{
+                id: Date.now().toString(),
+                title: title,
+                messages: currentMessages,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }, ...prev]);
+        }
+        resetChat();
+    };
+
+    const clearAllHistory = () => {
+        setHistory([]);
+        resetChat();
     };
 
     useEffect(() => {
@@ -651,10 +703,10 @@ export default function RightChatPanel() {
             const corporates = await fetchAllCorporates();
             const query = textToSend.toLowerCase().trim();
 
-            // --- STORYBOARD: NINA CLAIM FLOW ---
+            // --- STORYBOARD: Cloye CLAIM FLOW ---
             const claimTriggers = [
-                "i want to file a claim", 
-                "i want to report a claim", 
+                "i want to file a claim",
+                "i want to report a claim",
                 "i want to submit a claim",
                 "i want to file a new claim, can you help me wiht that..",
                 "i want to claim a file",
@@ -694,32 +746,32 @@ export default function RightChatPanel() {
                 setIsTyping(true);
                 await new Promise(r => setTimeout(r, 1500));
                 setIsTyping(false);
-                await streamMessage("Done. Here\u2019s what I found from your bill: **Dental treatment**. **March 10, 2026**. **$190 total**. Correct?", "assistant");
+                await streamMessage("I can see your uploaded bill. Here\u2019s what I found from your bill: \n\n**Expense type**: Dental treatment. \n**Clinic Name**: Bright Clove \n**Date of Expense**: March 10, 2026 \n**Total Expense amount**: $190 total. \n\nIs this correct information?", "assistant");
                 return;
             }
 
             if (CloyeStep === 4) { // Scene 5 -> Scene 6/7/8
-                if (query.includes("yes") || query.includes("yep") || query.includes("correct")) {
+                if (query.includes("yes") || query.includes("yep") || query.includes("correct") || query.includes("it is")) {
                     setCloyeStep(5);
                     setIsTyping(true);
                     await new Promise(r => setTimeout(r, 800));
                     setIsTyping(false);
                     await streamMessage("I matched your policy. You\u2019re covered under **Silver Plan**. Your dental limit is **$200**. This claim is **fully eligible**.", "assistant");
-                    await new Promise(r => setTimeout(r, 500));
-                    await streamMessage("Submit now?", "assistant");
+                    await new Promise(r => setTimeout(r, 800));
+                    await streamMessage("Can I submit this expense now?", "assistant");
                     return;
                 }
             }
 
             if (CloyeStep === 5) { // Scene 8 -> Scene 9/10
-                if (query.includes("yes") || query.includes("yep") || query.includes("do it")) {
+                if (query.includes("yes") || query.includes("yep") || query.includes("do it") || query.includes("submit")) {
                     setCloyeStep(0);
                     setIsTyping(true);
                     await new Promise(r => setTimeout(r, 500));
                     setIsTyping(false);
-                    await streamMessage("Done. Claim ID: **CLM-10234**. I\u2019ll track it for you.", "assistant");
+                    await streamMessage("Claim Submitted. Your **Claim ID: CLM-10234**. I\u2019ll track it for you and send you notification as there is any update.", "assistant");
                     await new Promise(r => setTimeout(r, 1000));
-                    await streamMessage("Next time \u2014 just say \u201cfile a claim.\u201d I\u2019ll take care of everything. A confirmation email is on its way to **john.m@gmail.com**.", "assistant");
+                    await streamMessage("I\u2019ve sent a confirmation to **john.m@gmail.com**.", "assistant");
                     return;
                 }
             }
@@ -1054,7 +1106,9 @@ export default function RightChatPanel() {
                 {isExpanded && (
                     <div className='w-[260px] bg-slate-900 h-full flex flex-col border-r border-slate-800 animate-slide-in-right'>
                         <div className='p-4'>
-                            <button className='w-full flex items-center justify-between px-3 py-2 border border-slate-700 hover:bg-slate-800 rounded-lg text-slate-300 text-xs font-bold transition-all transition-all duration-300 group'>
+                            <button
+                                onClick={createNewSession}
+                                className='w-full flex items-center justify-between px-3 py-2 border border-slate-700 hover:bg-slate-800 rounded-lg text-slate-300 text-xs font-bold transition-all transition-all duration-300 group'>
                                 <span className='flex items-center gap-2'>
                                     <Plus size={14} className="group-hover:rotate-90 transition-transform" />
                                     New Chat session
@@ -1066,29 +1120,35 @@ export default function RightChatPanel() {
                         <div className='flex-1 overflow-y-auto px-2 space-y-4 py-2 custom-scrollbar'>
                             <div>
                                 <p className='px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3'>Recent History</p>
-                                <div className='space-y-0.5'>
-                                    {[
-                                        { title: "Travel Claim #CLM-10234", time: "2m ago" },
-                                        { title: "Adding New Member Guide", time: "1h ago" },
-                                        { title: "Corporate Onboarding Flow", time: "Yesterday" },
-                                        { title: "Health Plan Benefits Inquiry", time: "Monday" },
-                                    ].map((chat, i) => (
-                                        <button key={i} className={clsx(
-                                            "w-full text-left px-4 py-2 rounded-lg text-xs font-bold flex flex-col gap-0.5 group transition-all",
-                                            i === 0 ? "bg-slate-800 text-white shadow-inner" : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                                        )}>
-                                            <span className="truncate">{chat.title}</span>
-                                            <span className="text-[8px] text-slate-600 group-hover:text-slate-500 flex items-center gap-1">
-                                                <Clock size={8} /> {chat.time}
-                                            </span>
-                                        </button>
-                                    ))}
+                                <div className='space-y-0.5 px-2 overflow-y-auto max-h-[calc(100vh-250px)]'>
+                                    {history.length > 0 ? (
+                                        history.map((session) => (
+                                            <button
+                                                key={session.id}
+                                                onClick={() => {
+                                                    setMessages(session.messages);
+                                                }}
+                                                className="w-full text-left px-4 py-2.5 rounded-lg text-[11px] font-bold flex flex-col gap-0.5 group transition-all text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent hover:border-slate-700 hover:shadow-lg"
+                                            >
+                                                <span className="truncate w-full block">{session.title}</span>
+                                                <span className="text-[8px] text-slate-600 group-hover:text-slate-500 flex items-center gap-1">
+                                                    <Clock size={8} /> {session.timestamp}
+                                                </span>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-2">
+                                            <p className="text-[10px] text-slate-600 italic">No recent conversations</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
                         <div className='p-4 border-t border-slate-800'>
-                            <button className='w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 text-xs font-bold transition-all'>
+                            <button
+                                onClick={clearAllHistory}
+                                className='w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-red-900/40 hover:text-red-300 text-xs font-bold transition-all border border-transparent hover:border-red-900/50'>
                                 <History size={16} />
                                 Clear Conversations
                             </button>
@@ -1118,7 +1178,8 @@ export default function RightChatPanel() {
                                     {msg.text
                                         .split("**")
                                         .map((part, i) =>
-                                            i % 2 === 1 ? <strong key={i} className="font-extrabold text-blue-600">{part}</strong> : part,
+                                            i % 2 === 1 ? <strong key={i} className="font-extrabold text-[#113854]">{part}</strong> :
+                                                part.replace(/Cloye/g, "Cloye")
                                         )}
 
                                     {/* Action Buttons */}
