@@ -388,7 +388,7 @@ export default function RightChatPanel() {
         isInterruptedRef.current = false;
         const secondMsg = "What would you like to do today? I can help you to onboard a new company or file a claim or onboard a new policy provider.";
         const thirdMsg = "You can talk to or you can type text here.";
-        
+
         const timer = setTimeout(async () => {
             if (!isInterruptedRef.current) {
                 await streamMessage(secondMsg, "assistant");
@@ -516,7 +516,7 @@ export default function RightChatPanel() {
         setPendingContext(null);
         setInputValue("");
         setIsTyping(false);
-        
+
         // Trigger the vocal greeting sequence
         triggerGreeting();
     };
@@ -527,10 +527,10 @@ export default function RightChatPanel() {
         if (userMsgs.length > 0) {
             const firstMsgText = userMsgs[0].text;
             const title = firstMsgText.length > 30 ? firstMsgText.substring(0, 30) + "..." : firstMsgText;
-            
+
             // Capture the current messages in a local variable to be safe
             const currentMessages = [...messages];
-            
+
             setHistory(prev => [{
                 id: Date.now().toString(),
                 title: title,
@@ -713,7 +713,7 @@ export default function RightChatPanel() {
                 "i want to claim",
                 "claim"
             ];
-            if (claimTriggers.includes(query) || query.includes("can you help me wiht that") || (query.includes("i want to") && query.includes("claim"))) {
+            if (query.includes("claim") || query.includes("can you help me wiht that")) {
                 setCloyeStep(1);
                 setIsTyping(false);
                 await streamMessage("Of course \u2014 I can help with that. I found your account under **Jon Mercer**, ID **2026AB**. Should I use this account to continue?", "assistant");
@@ -931,7 +931,7 @@ export default function RightChatPanel() {
                         `• **Status**: ${found.corporateInfoCompleted ? "Profile Completed" : "In Progress"}`;
                 } else {
                     responseText =
-                        "I'm here to assist! I can help you find corporate data (e.g., 'List customers') or guide you through workflows (e.g., 'How to add a new member').";
+                        "I'm here to assist! I can help you find corporate data (for example, 'List customers') or guide you through workflows (like, 'How to add a new member').";
                 }
             }
 
