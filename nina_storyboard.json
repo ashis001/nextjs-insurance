@@ -1,11 +1,11 @@
 {
-  "project": "NINA Insurance Assistant Storyboard",
+  "project": "Cloye Insurance Assistant Storyboard",
   "customer": {
     "name": "Jon Mercer",
     "id": "2026AB"
   },
   "assistant": {
-    "name": "NINA",
+    "name": "Cloye",
     "primary_traits": [
       "Smooth",
       "Confident",
@@ -23,7 +23,7 @@
         {
           "type": "interaction",
           "action": "cursor moves",
-          "target": "Ask NINA Button"
+          "target": "Ask Cloye Button"
         }
       ],
       "interaction": [
@@ -37,10 +37,10 @@
     {
       "scene_id": 2,
       "title": "Instant Recognition",
-      "nina_tone": "smooth, confident",
+      "Cloye_tone": "smooth, confident",
       "interaction": [
         {
-          "role": "nina",
+          "role": "Cloye",
           "text": "Of course \u2014 I can help with that. I found your account under Jon Mercer, ID 2026AB. Should I use this account to continue?"
         },
         {
@@ -55,7 +55,7 @@
       "visual_effects": "Subtle loading animation (1 sec)",
       "interaction": [
         {
-          "role": "nina",
+          "role": "Cloye",
           "text": "Got it. I can see you have 3 active policies: Health, Travel and Auto. Which policy is this for?"
         },
         {
@@ -67,10 +67,10 @@
     {
       "scene_id": 4,
       "title": "Friction Kill Moment",
-      "nina_tone": "slight shift, helpful tone",
+      "Cloye_tone": "slight shift, helpful tone",
       "interaction": [
         {
-          "role": "nina",
+          "role": "Cloye",
           "text": "Please Upload your bill \u2014 I\u2019ll handle the rest."
         },
         {
@@ -85,14 +85,15 @@
       "title": "AI in Action",
       "visual_effects": "Quick scan animation over document",
       "data_points_found": {
-        "treatment_type": "Dental treatment",
-        "date": "March 10, 2026",
-        "total_amount": "$190"
+        "expense_type": "Dental treatment",
+        "clinic_name": "Bright Clove",
+        "date_of_expense": "March 10, 2026",
+        "total_expense_amount": "$190"
       },
       "interaction": [
         {
-          "role": "nina",
-          "text": "Done. Here\u2019s what I found from your bill: Dental treatment. March 10, 2026. $190 total. Correct?"
+          "role": "Cloye",
+          "text": "I can see your uploaded bill. Here\u2019s what I found from your bill: \n\nExpense type: Dental treatment. \nClinic Name: Bright Clove \nDate of Expense: March 10, 2026 \nTotal Expense amount: $190 total. \n\nIs this correct information?"
         },
         {
           "role": "user",
@@ -103,7 +104,7 @@
     {
       "scene_id": 6,
       "title": "Intelligence Peak",
-      "nina_internal_logic": "tiny pause / thinking",
+      "Cloye_internal_logic": "tiny pause / thinking",
       "eligibility_check": {
         "policy": "Silver Plan",
         "category_limits": {
@@ -113,7 +114,7 @@
       },
       "interaction": [
         {
-          "role": "nina",
+          "role": "Cloye",
           "text": "I matched your policy. You\u2019re covered under Silver Plan. Your dental limit is $200. This claim is fully eligible."
         }
       ]
@@ -123,8 +124,8 @@
       "title": "Control",
       "interaction": [
         {
-          "role": "nina",
-          "text": "Submit now?"
+          "role": "Cloye",
+          "text": "Can I submit this expense now?"
         },
         {
           "role": "user",
@@ -142,20 +143,19 @@
       },
       "interaction": [
         {
-          "role": "nina",
-          "text": "Done. Claim ID: CLM-10234. I\u2019ll track it for you."
+          "role": "Cloye",
+          "text": "Claim Submitted. Your Claim ID: CLM-10234. I\u2019ll track it for you and send you notification as there is any update."
         }
       ]
     },
     {
       "scene_id": 10,
       "title": "Power Close",
-      "nina_tone": "slight smile tone",
-      "onboarding_tip": "next time, just say 'file a claim'",
+      "Cloye_tone": "slight smile tone",
       "interaction": [
         {
-          "role": "nina",
-          "text": "Next time \u2014 just say \"file a claim.\" I\u2019ll take care of everything. A confirmation email is on its way to john.m@gmail.com."
+          "role": "Cloye",
+          "text": "I\u2019ve sent a confirmation to john.m@gmail.com."
         }
       ]
     }
