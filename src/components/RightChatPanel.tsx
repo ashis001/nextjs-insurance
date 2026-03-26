@@ -15,7 +15,12 @@ import {
     Play,
     Minimize2,
     Maximize2,
-    MousePointer2
+    MousePointer2,
+    Paperclip,
+    Plus,
+    Clock,
+    History,
+    Sidebar as SidebarIcon
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@/context/ChatContext";
@@ -48,12 +53,15 @@ export default function RightChatPanel() {
         isWorkflowActive,
         isFloating,
         setIsFloating,
+        isExpanded,
+        setIsExpanded
     } = useChat();
     const [inputValue, setInputValue] = useState("");
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isListening, setIsListening] = useState(false);
     const [isVoiceMode, setIsVoiceMode] = useState(false); // Persistent voice mode
     const [pendingContext, setPendingContext] = useState<string | null>(null); // NEW: Track conversational state
+    const [CloyeStep, setCloyeStep] = useState<number>(0); // NEW: Track Cloye Storyboard progress
 
     // Dragging State
     const [position, setPosition] = useState({ x: 0, y: 0 }); // Controlled by layout effect
@@ -85,6 +93,7 @@ export default function RightChatPanel() {
     const isInterruptedRef = useRef(false);
     const activeMessageTextRef = useRef<string | null>(null);
     const [guideTargetRect, setGuideTargetRect] = useState<{ top: number, left: number, width: number, height: number } | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Sync refs for async callbacks
     useEffect(() => {
@@ -266,7 +275,7 @@ export default function RightChatPanel() {
     const [messages, setMessages] = useState<Message[]>([
         {
             id: "1",
-            text: "Hi, I'm **Nina**. Your Assistant. Ask me anything",
+            text: "Hi, I'm **Cloye**. Your Assistant. Ask me anything",
             sender: "assistant",
             timestamp: "", // Initialize empty to prevent hydration mismatch
         },
@@ -378,8 +387,8 @@ export default function RightChatPanel() {
             // CASE A: Opened via Top Bar (or any direct external trigger)
             if (externalMessage) {
                 const timer = setTimeout(async () => {
-                    const isStandardGreeting = externalMessage.toLowerCase().includes("hi, i’m nina") ||
-                        externalMessage.toLowerCase().includes("hi, i'm nina") ||
+                    const isStandardGreeting = externalMessage.toLowerCase().includes("hi, i’m Cloye") ||
+                        externalMessage.toLowerCase().includes("hi, i'm Cloye") ||
                         externalMessage.toLowerCase().includes("hi, i’m max") ||
                         externalMessage.toLowerCase().includes("hi, i'm max");
                     const isIntroQuestion = externalMessage.includes("What would you like to do today?");
@@ -393,7 +402,7 @@ export default function RightChatPanel() {
                     if (isIntroQuestion) {
                         const hiddenGreeting: Message = {
                             id: "0",
-                            text: "Hi, I'm **Nina**. Your Assistant. Ask me anything",
+                            text: "Hi, I'm **Cloye**. Your Assistant. Ask me anything",
                             sender: "assistant",
                             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                         };
@@ -426,7 +435,7 @@ export default function RightChatPanel() {
                         await streamMessage(externalMessage, "assistant");
                     }
 
-                    // If it was the standard "Hi I'm Nina", we follow up with the Question + Tips
+                    // If it was the standard "Hi I'm Cloye", we follow up with the Question + Tips
                     if (isStandardGreeting) {
                         if (!isInterruptedRef.current) {
                             await streamMessage(secondMsg, "assistant");
@@ -571,6 +580,37 @@ export default function RightChatPanel() {
         };
     }, [isDragging, isFloating, width]);
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Visual confirmation of file upload in chat
+        const userMsg: Message = {
+            id: Date.now().toString(),
+            text: `Attached file: **${file.name}**`,
+            sender: "user",
+            timestamp: new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+            }),
+        };
+        setMessages((prev) => [...prev, userMsg]);
+
+        // If we are in the Cloye storyboard flow waiting for a bill (Scene 4)
+        if (CloyeStep === 3) {
+            handleSend("Uploaded bill"); // Trigger next step in Cloye flow via send logic
+        } else {
+            setIsTyping(true);
+            setTimeout(async () => {
+                setIsTyping(false);
+                await streamMessage(`I've received your document: **${file.name}**. How would you like me to process this?`, "assistant");
+            }, 1000);
+        }
+
+        // Reset input so the same file can be selected again
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
     const handleSend = async (overrideValue?: string) => {
         // Stop current listening for processing
         if (silenceTimerRef.current) {
@@ -610,6 +650,79 @@ export default function RightChatPanel() {
             isInterruptedRef.current = false; // Reset to allow the new response to stream
             const corporates = await fetchAllCorporates();
             const query = textToSend.toLowerCase().trim();
+
+            // --- STORYBOARD: NINA CLAIM FLOW ---
+            const claimTriggers = [
+                "i want to file a claim", 
+                "i want to report a claim", 
+                "i want to submit a claim",
+                "i want to file a new claim, can you help me wiht that..",
+                "i want to claim a file",
+                "i want to claim",
+                "claim"
+            ];
+            if (claimTriggers.includes(query) || query.includes("can you help me wiht that") || (query.includes("i want to") && query.includes("claim"))) {
+                setCloyeStep(1);
+                setIsTyping(false);
+                await streamMessage("Of course \u2014 I can help with that. I found your account under **Jon Mercer**, ID **2026AB**. Should I use this account to continue?", "assistant");
+                return;
+            }
+
+            if (CloyeStep === 1) { // Scene 2 -> Scene 3
+                if (query.includes("yes") || query.includes("yep") || query.includes("sure")) {
+                    setCloyeStep(2);
+                    setIsTyping(false);
+                    setIsTyping(true);
+                    await new Promise(r => setTimeout(r, 1000));
+                    setIsTyping(false);
+                    await streamMessage("Got it. I can see you have 3 active policies: **Health**, **Travel** and **Auto**. Which policy is this for?", "assistant");
+                    return;
+                }
+            }
+
+            if (CloyeStep === 2) { // Scene 3 -> Scene 4
+                if (query.includes("health")) {
+                    setCloyeStep(3);
+                    setIsTyping(false);
+                    await streamMessage("Please Upload your bill \u2014 I\u2019ll handle the rest.", "assistant");
+                    return;
+                }
+            }
+
+            if (CloyeStep === 3) { // Scene 4 -> Scene 5
+                setCloyeStep(4);
+                setIsTyping(true);
+                await new Promise(r => setTimeout(r, 1500));
+                setIsTyping(false);
+                await streamMessage("Done. Here\u2019s what I found from your bill: **Dental treatment**. **March 10, 2026**. **$190 total**. Correct?", "assistant");
+                return;
+            }
+
+            if (CloyeStep === 4) { // Scene 5 -> Scene 6/7/8
+                if (query.includes("yes") || query.includes("yep") || query.includes("correct")) {
+                    setCloyeStep(5);
+                    setIsTyping(true);
+                    await new Promise(r => setTimeout(r, 800));
+                    setIsTyping(false);
+                    await streamMessage("I matched your policy. You\u2019re covered under **Silver Plan**. Your dental limit is **$200**. This claim is **fully eligible**.", "assistant");
+                    await new Promise(r => setTimeout(r, 500));
+                    await streamMessage("Submit now?", "assistant");
+                    return;
+                }
+            }
+
+            if (CloyeStep === 5) { // Scene 8 -> Scene 9/10
+                if (query.includes("yes") || query.includes("yep") || query.includes("do it")) {
+                    setCloyeStep(0);
+                    setIsTyping(true);
+                    await new Promise(r => setTimeout(r, 500));
+                    setIsTyping(false);
+                    await streamMessage("Done. Claim ID: **CLM-10234**. I\u2019ll track it for you.", "assistant");
+                    await new Promise(r => setTimeout(r, 1000));
+                    await streamMessage("Next time \u2014 just say \u201cfile a claim.\u201d I\u2019ll take care of everything. A confirmation email is on its way to **john.m@gmail.com**.", "assistant");
+                    return;
+                }
+            }
 
             // --- CONTEXTUAL INTENT RESOLUTION ---
             if (pendingContext === "onboarding_sample_prompt") {
@@ -652,7 +765,7 @@ export default function RightChatPanel() {
 
             if (query === "hi" || query === "hello") {
                 setIsTyping(false);
-                await streamMessage("Hi I am Nina, I am here to assist you.", "assistant");
+                await streamMessage("Hi I am Cloye, I am here to assist you.", "assistant");
                 return;
             }
 
@@ -789,19 +902,21 @@ export default function RightChatPanel() {
                     isListening ? "border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.3)]" :
                         "border-gray-200 shadow-[-4px_0_20px_rgba(0,0,0,0.1)]",
 
-                isFloating ? "rounded-2xl overflow-hidden h-[480px] max-h-[85vh]" : "top-0 right-0 h-full border-l border-y-0 border-r-0",
-                isOpen ? (isFloating ? "opacity-100 scale-100" : "translate-x-0") : (isFloating ? "opacity-0 scale-95 pointer-events-none" : "translate-x-full overflow-hidden w-0"),
+                isFloating ? "rounded-2xl overflow-hidden h-[480px] max-h-[85vh]" : (isExpanded ? "top-0 left-0 w-full h-full border-l border-slate-200" : "top-0 right-0 h-full border-l border-y-0 border-r-0"),
+                isOpen ? (isExpanded ? "translate-x-0" : (isFloating ? "opacity-100 scale-100" : "translate-x-0")) : (isFloating ? "opacity-0 scale-95 pointer-events-none" : "translate-x-full overflow-hidden w-0"),
+                isExpanded && "z-[100000]",
                 isDragging && "transition-none"
             )}
             style={{
-                width: isOpen ? (isFloating ? "330px" : `${width}px`) : "0px",
+                width: isOpen ? (isExpanded ? "calc(100vw - 260px)" : (isFloating ? "350px" : `${width}px`)) : "0px",
                 right: isFloating ? "auto" : "0",
-                left: isFloating ? `${position.x}px` : "auto",
-                top: isFloating ? `${position.y}px` : "0",
+                left: isFloating ? (isExpanded ? "260px" : `${position.x}px`) : (isExpanded ? "260px" : "auto"),
+                top: isFloating ? (isExpanded ? "0" : `${position.y}px`) : "0",
                 transition: (isResizing || isDragging)
                     ? "none"
-                    : "width 300ms ease-in-out, transform 300ms ease-in-out, left 300ms ease-in-out, top 300ms ease-in-out, border-color 300ms, box-shadow 300ms, opacity 300ms, scale 300ms",
+                    : "width 300ms cubic-bezier(0.16, 1, 0.3, 1), transform 300ms ease-in-out, left 300ms ease-in-out, top 300ms ease-in-out, border-color 300ms, box-shadow 300ms",
             }}>
+
             {/* Resize Handle - Only in Sidebar Mode */}
             {!isFloating && (
                 <div
@@ -831,7 +946,7 @@ export default function RightChatPanel() {
                         )}>
                             <img
                                 alt='Voice Assistant'
-                                src='https://cdnstaticfiles.blob.core.windows.net/cdnstaticfiles/agent_images/nina.jpeg'
+                                src='https://cdnstaticfiles.blob.core.windows.net/img/1770617819808_cloye-agent-face.jpg'
                                 className='w-full h-full rounded-full object-cover object-top'
                             />
                         </div>
@@ -852,7 +967,7 @@ export default function RightChatPanel() {
                     </div>
                     <div>
                         <h3 className='text-[#1e3a5f] font-bold text-sm tracking-tight'>
-                            NINA
+                            Cloye
                         </h3>
 
                         {(isSpeaking || isListening) && (
@@ -909,11 +1024,17 @@ export default function RightChatPanel() {
                         {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                     </button>
                     <button
-                        onClick={() => setIsFloating(!isFloating)}
-                        className='p-2 rounded-full transition-all text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100'
-                        title={isFloating ? "Dock to Right" : "Float / Minimize"}
+                        onClick={() => {
+                            if (isFloating) setIsFloating(false);
+                            setIsExpanded(!isExpanded);
+                        }}
+                        className={clsx(
+                            'p-2 rounded-full transition-all text-gray-400 hover:text-[#1e3a5f] hover:bg-gray-100',
+                            isExpanded && 'bg-blue-50 text-blue-600'
+                        )}
+                        title={isExpanded ? "Exit Full Screen" : "Full Screen Mode (History)"}
                     >
-                        {isFloating ? <Maximize2 size={18} /> : <Minimize2 size={18} />}
+                        {isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                     </button>
                     <button
                         onClick={() => {
@@ -927,177 +1048,242 @@ export default function RightChatPanel() {
                 </div>
             </div>
 
-            {/* Chat Messages Area */}
-            <div className='flex-1 overflow-y-auto p-4 pb-6 space-y-2.5'>
-                {messages.map((msg) => (
-                    <div
-                        key={msg.id}
-                        className={clsx(
-                            "flex flex-col gap-0.5",
-                            msg.sender === "user"
-                                ? "items-end ml-auto max-w-[85%]"
-                                : "max-w-[85%]",
-                        )}>
-                        <div
-                            className={clsx(
-                                "py-2 px-3.5 rounded-xl shadow-sm text-[13.5px] leading-snug border whitespace-pre-wrap font-medium",
-                                msg.sender === "user"
-                                    ? "bg-[#1e3a5f] text-white border-[#1e3a5f]/10 rounded-tr-none shadow-lg"
-                                    : "bg-white text-slate-700 border-slate-200 rounded-tl-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
-                            )}>
-                            {msg.text
-                                .split("**")
-                                .map((part, i) =>
-                                    i % 2 === 1 ? <strong key={i} className="font-extrabold text-blue-600">{part}</strong> : part,
-                                )}
+            {/* Main Chat Content Area */}
+            <div className='flex-1 flex overflow-hidden'>
+                {/* ChatGPT Style History Sidebar */}
+                {isExpanded && (
+                    <div className='w-[260px] bg-slate-900 h-full flex flex-col border-r border-slate-800 animate-slide-in-right'>
+                        <div className='p-4'>
+                            <button className='w-full flex items-center justify-between px-3 py-2 border border-slate-700 hover:bg-slate-800 rounded-lg text-slate-300 text-xs font-bold transition-all transition-all duration-300 group'>
+                                <span className='flex items-center gap-2'>
+                                    <Plus size={14} className="group-hover:rotate-90 transition-transform" />
+                                    New Chat session
+                                </span>
+                                <span className='text-[10px] text-slate-500 border border-slate-700 px-1.5 rounded'>⌘K</span>
+                            </button>
+                        </div>
 
-                            {/* Action Buttons */}
-                            {msg.actions && (
-                                <div className='mt-4 flex flex-col gap-2'>
-                                    {msg.actions.map((action, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                // Clear pending context immediately
-                                                setPendingContext(null);
-
-                                                if (action.value === "real") {
-                                                    handleSend("Use Real Customer");
-                                                } else if (action.value === "sample") {
-                                                    // Interactive Guide Logic
-                                                    const navItem = document.getElementById("nav-item-corporate-customers");
-                                                    if (navItem) {
-                                                        // 1. Speak & Show Message
-                                                        streamMessage("Please select the Corporate Customer tab on the sidebar.", "assistant");
-
-                                                        const rect = navItem.getBoundingClientRect();
-                                                        setGuideTargetRect({
-                                                            top: rect.top,
-                                                            left: rect.left,
-                                                            width: rect.width,
-                                                            height: rect.height
-                                                        });
-
-                                                        // 2. Wait 4 seconds, Speak next part, then Navigate
-                                                        setTimeout(async () => {
-                                                            setGuideTargetRect(null);
-                                                            await streamMessage("Let’s start by creating the company profile.", "assistant");
-
-                                                            localStorage.setItem("max_guide_step", "add_customer");
-                                                            router.push("/corporate-customers");
-                                                        }, 4000);
-                                                    } else {
-                                                        // Fallback
-                                                        localStorage.setItem("max_guide_step", "add_customer");
-                                                        router.push("/corporate-customers");
-                                                    }
-                                                } else if (action.value === "sample_claim") {
-                                                    // Interactive Guide Logic for Claims
-                                                    const navItem = document.getElementById("nav-item-claims");
-                                                    if (navItem) {
-                                                        // 1. Speak & Show Message
-                                                        streamMessage("Please select the Claims tab in the sidebar.", "assistant");
-
-                                                        const rect = navItem.getBoundingClientRect();
-                                                        setGuideTargetRect({
-                                                            top: rect.top,
-                                                            left: rect.left,
-                                                            width: rect.width,
-                                                            height: rect.height
-                                                        });
-
-                                                        // 2. Wait for a moment to show the pointer, then speak next part and navigate
-                                                        setTimeout(async () => {
-                                                            setGuideTargetRect(null);
-                                                            await streamMessage("Let's file a sample claim to show you how it works.", "assistant");
-
-                                                            localStorage.setItem("max_guide_step", "claim_insurance");
-                                                            router.push("/claims");
-                                                        }, 4000); // Time to allow for speech and pointer display
-                                                    } else {
-                                                        // Fallback
-                                                        localStorage.setItem("max_guide_step", "claim_insurance");
-                                                        router.push("/claims");
-                                                    }
-                                                } else if (action.value === "real_claim") {
-                                                    router.push("/claims");
-                                                } else if (action.value === "navigate_claims") {
-                                                    router.push("/claims");
-                                                } else {
-                                                    handleSend(action.label);
-                                                }
-                                            }}
-                                            className='w-full py-2.5 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[11.5px] font-bold text-[#1e3a5f] hover:bg-blue-50 hover:border-blue-300 transition-all text-left flex items-center justify-between group shadow-sm'>
-                                            {action.label}
-                                            <div className='w-5.5 h-5.5 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm'>
-                                                →
-                                            </div>
+                        <div className='flex-1 overflow-y-auto px-2 space-y-4 py-2 custom-scrollbar'>
+                            <div>
+                                <p className='px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3'>Recent History</p>
+                                <div className='space-y-0.5'>
+                                    {[
+                                        { title: "Travel Claim #CLM-10234", time: "2m ago" },
+                                        { title: "Adding New Member Guide", time: "1h ago" },
+                                        { title: "Corporate Onboarding Flow", time: "Yesterday" },
+                                        { title: "Health Plan Benefits Inquiry", time: "Monday" },
+                                    ].map((chat, i) => (
+                                        <button key={i} className={clsx(
+                                            "w-full text-left px-4 py-2 rounded-lg text-xs font-bold flex flex-col gap-0.5 group transition-all",
+                                            i === 0 ? "bg-slate-800 text-white shadow-inner" : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                                        )}>
+                                            <span className="truncate">{chat.title}</span>
+                                            <span className="text-[8px] text-slate-600 group-hover:text-slate-500 flex items-center gap-1">
+                                                <Clock size={8} /> {chat.time}
+                                            </span>
                                         </button>
                                     ))}
                                 </div>
-                            )}
-                        </div>
-                        {/* Metadata removed as per user request */}
-                    </div>
-                ))}
-
-                {isTyping && (
-                    <div className='flex flex-col gap-2 max-w-[85%] animate-fade-in'>
-                        <div className='bg-white p-4 rounded-2xl rounded-tl-none border border-gray-200 shadow-sm inline-flex items-center w-fit'>
-                            <div className='flex space-x-1.5 h-3 items-center'>
-                                <div className='w-2 h-2 bg-[#1e3a5f]/60 rounded-full animate-bounce [animation-delay:-0.3s]' />
-                                <div className='w-2 h-2 bg-[#1e3a5f]/60 rounded-full animate-bounce [animation-delay:-0.15s]' />
-                                <div className='w-2 h-2 bg-[#1e3a5f]/60 rounded-full animate-bounce' />
                             </div>
+                        </div>
+
+                        <div className='p-4 border-t border-slate-800'>
+                            <button className='w-full flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 text-xs font-bold transition-all'>
+                                <History size={16} />
+                                Clear Conversations
+                            </button>
                         </div>
                     </div>
                 )}
-                <div ref={messagesEndRef} />
-            </div>
 
-            {/* Input Section */}
-            <div className='p-4 bg-white/80 backdrop-blur-md border-t border-slate-200/60'>
-                <form
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        handleSend();
-                    }}
-                    className='flex items-center gap-2 bg-white rounded-2xl border-2 border-slate-300 p-1.5 focus-within:border-[#1e3a5f] focus-within:ring-2 focus-within:ring-[#1e3a5f]/20 transition-all shadow-sm'>
-                    <button
-                        type='button'
-                        onClick={toggleListening}
-                        className={clsx(
-                            "transition-all p-2.5 rounded-xl shadow-sm border",
-                            isVoiceMode
-                                ? "bg-red-50 border-red-200 text-red-500 hover:bg-red-100 hover:text-red-600 hover:border-red-300 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse hover:animate-none"
-                                : "bg-transparent border-transparent text-gray-500 hover:text-[#1e3a5f] hover:bg-gray-50 hover:border-gray-200"
+                {/* Chat Messages Area */}
+                <div className='flex-1 flex flex-col min-w-0 bg-white'>
+                    <div className='flex-1 overflow-y-auto p-4 pb-6 space-y-2.5 custom-scrollbar'>
+                        {messages.map((msg) => (
+                            <div
+                                key={msg.id}
+                                className={clsx(
+                                    "flex flex-col gap-0.5",
+                                    msg.sender === "user"
+                                        ? "items-end ml-auto max-w-[85%]"
+                                        : "max-w-[85%]",
+                                )}>
+                                <div
+                                    className={clsx(
+                                        "py-2 px-3.5 rounded-xl shadow-sm text-[13.5px] leading-snug border whitespace-pre-wrap font-medium",
+                                        msg.sender === "user"
+                                            ? "bg-[#1e3a5f] text-white border-[#1e3a5f]/10 rounded-tr-none shadow-lg"
+                                            : "bg-white text-slate-700 border-slate-200 rounded-tl-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
+                                    )}>
+                                    {msg.text
+                                        .split("**")
+                                        .map((part, i) =>
+                                            i % 2 === 1 ? <strong key={i} className="font-extrabold text-blue-600">{part}</strong> : part,
+                                        )}
+
+                                    {/* Action Buttons */}
+                                    {msg.actions && (
+                                        <div className='mt-4 flex flex-col gap-2'>
+                                            {msg.actions.map((action, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        // Clear pending context immediately
+                                                        setPendingContext(null);
+
+                                                        if (action.value === "real") {
+                                                            handleSend("Use Real Customer");
+                                                        } else if (action.value === "sample") {
+                                                            // Interactive Guide Logic
+                                                            const navItem = document.getElementById("nav-item-corporate-customers");
+                                                            if (navItem) {
+                                                                // 1. Speak & Show Message
+                                                                streamMessage("Please select the Corporate Customer tab on the sidebar.", "assistant");
+
+                                                                const rect = navItem.getBoundingClientRect();
+                                                                setGuideTargetRect({
+                                                                    top: rect.top,
+                                                                    left: rect.left,
+                                                                    width: rect.width,
+                                                                    height: rect.height
+                                                                });
+
+                                                                // 2. Wait 4 seconds, Speak next part, then Navigate
+                                                                setTimeout(async () => {
+                                                                    setGuideTargetRect(null);
+                                                                    await streamMessage("Let’s start by creating the company profile.", "assistant");
+
+                                                                    localStorage.setItem("max_guide_step", "add_customer");
+                                                                    router.push("/corporate-customers");
+                                                                }, 4000);
+                                                            } else {
+                                                                // Fallback
+                                                                localStorage.setItem("max_guide_step", "add_customer");
+                                                                router.push("/corporate-customers");
+                                                            }
+                                                        } else if (action.value === "sample_claim") {
+                                                            // Interactive Guide Logic for Claims
+                                                            const navItem = document.getElementById("nav-item-claims");
+                                                            if (navItem) {
+                                                                // 1. Speak & Show Message
+                                                                streamMessage("Please select the Claims tab in the sidebar.", "assistant");
+
+                                                                const rect = navItem.getBoundingClientRect();
+                                                                setGuideTargetRect({
+                                                                    top: rect.top,
+                                                                    left: rect.left,
+                                                                    width: rect.width,
+                                                                    height: rect.height
+                                                                });
+
+                                                                // 2. Wait for a moment to show the pointer, then speak next part and navigate
+                                                                setTimeout(async () => {
+                                                                    setGuideTargetRect(null);
+                                                                    await streamMessage("Let's file a sample claim to show you how it works.", "assistant");
+
+                                                                    localStorage.setItem("max_guide_step", "claim_insurance");
+                                                                    router.push("/claims");
+                                                                }, 4000); // Time to allow for speech and pointer display
+                                                            } else {
+                                                                // Fallback
+                                                                localStorage.setItem("max_guide_step", "claim_insurance");
+                                                                router.push("/claims");
+                                                            }
+                                                        } else if (action.value === "real_claim") {
+                                                            router.push("/claims");
+                                                        } else if (action.value === "navigate_claims") {
+                                                            router.push("/claims");
+                                                        } else {
+                                                            handleSend(action.label);
+                                                        }
+                                                    }}
+                                                    className='w-full py-2.5 px-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[11.5px] font-bold text-[#1e3a5f] hover:bg-blue-50 hover:border-blue-300 transition-all text-left flex items-center justify-between group shadow-sm'>
+                                                    {action.label}
+                                                    <div className='w-5.5 h-5.5 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm'>
+                                                        →
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Metadata removed as per user request */}
+                            </div>
+                        ))}
+
+                        {isTyping && (
+                            <div className='flex flex-col gap-2 max-w-[85%] animate-fade-in'>
+                                <div className='bg-white p-4 rounded-2xl rounded-tl-none border border-gray-200 shadow-sm inline-flex items-center w-fit'>
+                                    <div className='flex space-x-1.5 h-3 items-center'>
+                                        <div className='w-2 h-2 bg-[#1e3a5f]/60 rounded-full animate-bounce [animation-delay:-0.3s]' />
+                                        <div className='w-2 h-2 bg-[#1e3a5f]/60 rounded-full animate-bounce [animation-delay:-0.15s]' />
+                                        <div className='w-2 h-2 bg-[#1e3a5f]/60 rounded-full animate-bounce' />
+                                    </div>
+                                </div>
+                            </div>
                         )}
-                        title={isVoiceMode ? "Stop voice mode" : "Start voice mode"}>
-                        {isVoiceMode ? <X size={20} /> : <Mic size={20} />}
-                    </button>
-                    <input
-                        type='text'
-                        placeholder={isListening ? "Listening..." : "Ask Nina something..."}
+                        <div ref={messagesEndRef} />
+                    </div>
 
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        className='flex-1 min-w-0 bg-transparent text-gray-900 text-[13px] outline-none py-2 px-1 placeholder:text-gray-400 font-medium'
-                    />
-                    <button
-                        type='submit'
-                        disabled={!inputValue.trim() || isTyping}
-                        className={clsx(
-                            "p-2.5 rounded-xl transition-all shadow-md",
-                            inputValue.trim() && !isTyping
-                                ? "bg-[#1e3a5f] text-white hover:bg-[#162a45] hover:scale-105 active:scale-100"
-                                : "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed",
-                        )}>
-                        <Send size={18} />
-                    </button>
-                </form>
-            </div>
+                    {/* Input Section */}
+                    <div className='p-4 bg-white/80 backdrop-blur-md border-t border-slate-200/60'>
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                handleSend();
+                            }}
+                            className='flex items-center gap-2 bg-white rounded-2xl border-2 border-slate-300 p-1.5 focus-within:border-[#1e3a5f] focus-within:ring-2 focus-within:ring-[#1e3a5f]/20 transition-all shadow-sm'>
+                            <button
+                                type='button'
+                                onClick={toggleListening}
+                                className={clsx(
+                                    "transition-all p-2.5 rounded-xl shadow-sm border",
+                                    isVoiceMode
+                                        ? "bg-red-50 border-red-200 text-red-500 hover:bg-red-100 hover:text-red-600 hover:border-red-300 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse hover:animate-none"
+                                        : "bg-transparent border-transparent text-gray-500 hover:text-[#1e3a5f] hover:bg-gray-50 hover:border-gray-200"
+                                )}
+                                title={isVoiceMode ? "Stop voice mode" : "Start voice mode"}>
+                                {isVoiceMode ? <X size={20} /> : <Mic size={20} />}
+                            </button>
+                            <input
+                                type='text'
+                                placeholder={isListening ? "Listening..." : "Ask Cloye something..."}
+
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                className='flex-1 min-w-0 bg-transparent text-gray-900 text-[13px] outline-none py-2 px-1 placeholder:text-gray-400 font-medium'
+                            />
+                            <input
+                                type='file'
+                                ref={fileInputRef}
+                                onChange={handleFileUpload}
+                                className="hidden"
+                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                            />
+                            <button
+                                type='button'
+                                onClick={() => fileInputRef.current?.click()}
+                                className="p-2.5 rounded-xl transition-all text-gray-500 hover:text-[#1e3a5f] hover:bg-gray-50 hover:border-gray-200"
+                                title="Upload bill or document"
+                            >
+                                <Paperclip size={20} />
+                            </button>
+                            <button
+                                type='submit'
+                                disabled={!inputValue.trim() || isTyping}
+                                className={clsx(
+                                    "p-2.5 rounded-xl transition-all shadow-md",
+                                    inputValue.trim() && !isTyping
+                                        ? "bg-[#1e3a5f] text-white hover:bg-[#162a45] hover:scale-105 active:scale-100"
+                                        : "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed",
+                                )}>
+                                <Send size={18} />
+                            </button>
+                        </form>
+                    </div></div></div>
+
             {guideTargetRect && typeof document !== "undefined" && createPortal(
                 <div
                     style={{

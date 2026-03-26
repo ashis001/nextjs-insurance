@@ -3,9 +3,9 @@
 import { Sidebar } from "../corporate-customers/[id]/_components/Sidebar";
 import {
     FileText, CheckCircle, Clock, Shield, DollarSign, Calendar,
-    Heart, Stethoscope, Eye, Activity, UploadCloud, ChevronRight, ChevronLeft, ArrowRight, Sparkles, Plus, Search, Filter, Info, X
+    Heart, Stethoscope, Eye, Activity, UploadCloud, ChevronRight, ChevronLeft, ArrowRight, Sparkles, Plus, Search, Filter, Info, X, Car, Plane
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useChat } from "@/context/ChatContext";
 import { speakText } from "@/lib/google-tts";
 import { MousePointer2 } from "lucide-react";
@@ -25,11 +25,46 @@ const AnimatedGrid = () => (
 
 // Claim Types
 const INSURANCE_TYPES = [
-    { id: 'health', title: 'Medical Health', icon: Heart, description: 'Doctor visits, hospital stays, and surgery', color: 'rose' },
-    { id: 'dental', title: 'Dental Care', icon: Activity, description: 'Checkups, cleanings, and dental surgery', color: 'blue' },
-    { id: 'vision', title: 'Vision Coverage', icon: Eye, description: 'Eye exams, glasses, and contact lenses', color: 'emerald' },
-    { id: 'wellness', title: 'Wellness', icon: Stethoscope, description: 'Preventive care and wellness programs', color: 'amber' },
+    {
+        id: 'health',
+        title: 'Health',
+        icon: Heart,
+        description: 'Medical expenses, hospital stays, and doctor visits',
+        color: 'rose',
+        subTypes: [
+            { id: 'medical', title: 'Medical Health', description: 'Doctor visits and surgeries', icon: Heart },
+            { id: 'dental', title: 'Dental Care', description: 'Cleanings and dental surgery', icon: Activity },
+            { id: 'vision', title: 'Vision Coverage', description: 'Exams and contact lenses', icon: Eye },
+            { id: 'wellness', title: 'Wellness', description: 'Preventive care programs', icon: Stethoscope },
+        ]
+    },
+    {
+        id: 'auto',
+        title: 'Auto',
+        icon: Car,
+        description: 'Vehicle damage, accidents, and theft coverage',
+        color: 'blue',
+        subTypes: [
+            { id: 'accident', title: 'Accidental Damage', description: 'Collisions and repairs', icon: Activity },
+            { id: 'theft', title: 'Theft & Glass', description: 'Break-ins and glass damage', icon: Shield },
+            { id: 'maintenance', title: 'Regular Maintenance', description: 'Service and oil changes', icon: Clock },
+        ]
+    },
+    {
+        id: 'travel',
+        title: 'Travel',
+        icon: Plane,
+        description: 'Trip delays, baggage loss, and medical emergencies',
+        color: 'emerald',
+        subTypes: [
+            { id: 'trip', title: 'Trip Cancellation', description: 'Cancelled or delayed flights', icon: Activity },
+            { id: 'medical_travel', title: 'Medical (Travel)', description: 'Injuries while abroad', icon: Stethoscope },
+            { id: 'baggage', title: 'Lost Baggage', description: 'Stolen or lost personal items', icon: Shield },
+        ]
+    },
 ];
+
+
 
 export default function ClaimsPage() {
     const router = useRouter();
@@ -44,6 +79,7 @@ export default function ClaimsPage() {
 
     const [step, setStep] = useState(0);
     const [selectedType, setSelectedType] = useState<string | null>(null);
+    const [selectedSubType, setSelectedSubType] = useState<any>(null);
     const [mounted, setMounted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -119,7 +155,7 @@ export default function ClaimsPage() {
 
                     if (el) {
                         setActiveFillingField(targetId);
-                        await speak("Now, select a medical category. Let's choose Medical Health.");
+                        await speak("Now, select a category. Let's choose Health.");
                         // Wait for speech to complete before proceeding
                         await delay(2500);
                         if (!isWorkflowActiveRef.current) throw new Error("WorkflowCancelled");
@@ -350,7 +386,7 @@ export default function ClaimsPage() {
                             transform: 'translate(-50%, -100%)'
                         }}
                     >
-                        <div className="relative flex flex-col items-center animate-nina-pointer-float">
+                        <div className="relative flex flex-col items-center animate-Cloye-pointer-float">
                             <div className="text-red-500 filter drop-shadow-[0_4px_12px_rgba(239,68,68,0.4)] transform rotate-[225deg]">
                                 <MousePointer2 className="w-8 h-8 fill-red-500" />
                             </div>
@@ -380,7 +416,7 @@ export default function ClaimsPage() {
                                 onClick={toggleChat}
                                 className="flex items-center gap-2 px-5 py-2.5 bg-[#0a1e3b] text-white rounded-xl shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transition-all hover:-translate-y-0.5 font-black text-[11px] uppercase tracking-wider">
                                 <Sparkles className="w-4 h-4 text-blue-400" />
-                                Ask Nina
+                                Ask Cloye
                             </button>
                         </div>
                     </div>
@@ -438,18 +474,18 @@ export default function ClaimsPage() {
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
                                             {[
-                                                { id: 'CLM-89210', category: 'Medical Health', date: 'Feb 7, 2026 17:20', amount: '$245.50', status: 'Processing' },
-                                                { id: 'CLM-89105', category: 'Dental Care', date: 'Feb 5, 2026 10:15', amount: '$120.00', status: 'Paid' },
-                                                { id: 'CLM-88992', category: 'Vision Coverage', date: 'Feb 1, 2026 14:30', amount: '$350.00', status: 'Paid' },
-                                                { id: 'CLM-88845', category: 'Wellness', date: 'Jan 28, 2026 09:45', amount: '$75.00', status: 'Rejected' },
+                                                { id: 'CLM-89210', category: 'Health', date: 'Feb 7, 2026 17:20', amount: '$245.50', status: 'Processing' },
+                                                { id: 'CLM-89105', category: 'Auto', date: 'Feb 5, 2026 10:15', amount: '$120.00', status: 'Paid' },
+                                                { id: 'CLM-88992', category: 'Health', date: 'Feb 1, 2026 14:30', amount: '$350.00', status: 'Paid' },
+                                                { id: 'CLM-88845', category: 'Auto', date: 'Jan 28, 2026 09:45', amount: '$75.00', status: 'Rejected' },
+                                                { id: 'CLM-88777', category: 'Travel', date: 'Jan 25, 2026 11:00', amount: '$500.00', status: 'Processing' },
                                             ].map((claim, idx) => (
                                                 <tr key={idx} className="group hover:bg-slate-50 transition-colors duration-200">
                                                     <td className="px-6 py-4">
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${claim.category.includes('Medical') ? 'bg-rose-50 text-rose-600' :
-                                                                claim.category.includes('Dental') ? 'bg-blue-50 text-blue-600' :
-                                                                    claim.category.includes('Vision') ? 'bg-emerald-50 text-emerald-600' :
-                                                                        'bg-amber-50 text-amber-600'
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${claim.category === 'Health' ? 'bg-rose-50 text-rose-600' :
+                                                                claim.category === 'Travel' ? 'bg-purple-50 text-purple-600' :
+                                                                'bg-blue-50 text-blue-600'
                                                                 }`}>
                                                                 {claim.category.charAt(0)}
                                                             </div>
@@ -503,6 +539,32 @@ export default function ClaimsPage() {
                             </div>
 
                             <div className="space-y-5">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Claim Category</label>
+                                    <div className="relative">
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10">
+                                            {selectedSubType?.icon ? React.createElement(selectedSubType.icon, { className: "w-4 h-4" }) :
+                                                <span>{INSURANCE_TYPES.find(t => t.id === selectedType)?.icon &&
+                                                    React.createElement(INSURANCE_TYPES.find(t => t.id === selectedType)!.icon, { className: "w-4 h-4 opacity-50" })}</span>}
+                                        </div>
+                                        <select
+                                            className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-sm font-medium transition-all appearance-none bg-white cursor-pointer"
+                                            value={selectedSubType?.id || ""}
+                                            onChange={(e) => {
+                                                const type = INSURANCE_TYPES.find(t => t.id === selectedType);
+                                                const sub = type?.subTypes.find(s => s.id === e.target.value);
+                                                setSelectedSubType(sub);
+                                            }}
+                                        >
+                                            <option value="" disabled>Select {selectedType} type...</option>
+                                            {INSURANCE_TYPES.find(t => t.id === selectedType)?.subTypes.map(sub => (
+                                                <option key={sub.id} value={sub.id}>{sub.title}</option>
+                                            ))}
+                                        </select>
+                                        <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-5">
                                     <div className="space-y-1.5">
                                         <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Provider Name</label>
@@ -619,8 +681,10 @@ export default function ClaimsPage() {
 
                             <div className="bg-slate-50 rounded-2xl p-6 space-y-4 border border-slate-200">
                                 <div className="flex justify-between items-center pb-4 border-b border-slate-200">
-                                    <span className="text-xs font-bold text-slate-500 uppercase">Insurance Type</span>
-                                    <span className="text-sm font-bold text-slate-900 capitalize">{INSURANCE_TYPES.find(t => t.id === selectedType)?.title}</span>
+                                    <span className="text-sm font-bold text-slate-900 capitalize">
+                                        {INSURANCE_TYPES.find(t => t.id === selectedType)?.title}
+                                        {selectedSubType && ` - ${selectedSubType.title}`}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between items-center pb-4 border-b border-slate-200">
                                     <span className="text-xs font-bold text-slate-500 uppercase">Provider</span>
@@ -730,16 +794,15 @@ export default function ClaimsPage() {
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {[
-                                                { id: 'CLM-89210', category: 'Medical Health', date: 'Feb 7, 2026 17:20', status: 'Processing', color: 'blue' },
-                                                { id: 'CLM-89105', category: 'Dental Care', date: 'Feb 5, 2026 10:15', status: 'Paid', color: 'green' },
-                                                { id: 'CLM-88992', category: 'Vision Coverage', date: 'Feb 1, 2026 14:30', status: 'Paid', color: 'green' },
+                                                { id: 'CLM-89210', category: 'Health', date: 'Feb 7, 2026 17:20', status: 'Processing', color: 'blue' },
+                                                { id: 'CLM-89105', category: 'Auto', date: 'Feb 5, 2026 10:15', status: 'Paid', color: 'green' },
+                                                { id: 'CLM-88992', category: 'Health', date: 'Feb 1, 2026 14:30', status: 'Paid', color: 'green' },
                                             ].map((claim, idx) => (
                                                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                                                     <td className="px-8 py-4">
                                                         <div className="flex items-center gap-3">
-                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${claim.category.includes('Medical') ? 'bg-rose-50 text-rose-600' :
-                                                                claim.category.includes('Dental') ? 'bg-blue-50 text-blue-600' :
-                                                                    'bg-emerald-50 text-emerald-600'
+                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${claim.category === 'Health' ? 'bg-rose-50 text-rose-600' :
+                                                                'bg-blue-50 text-blue-600'
                                                                 }`}>
                                                                 {claim.category.charAt(0)}
                                                             </div>
@@ -782,8 +845,8 @@ export default function ClaimsPage() {
 
             {/* STEP 1: Select Insurance Type popup - Rendered outside main for full viewport coverage */}
             {step === 1 && (
-                <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/60 backdrop-blur animate-nina-fade-in px-8">
-                    <div className="bg-white rounded-[40px] shadow-[0_32px_80px_rgba(0,0,0,0.4)] border border-slate-200 w-full max-w-5xl relative animate-nina-scale-in overflow-hidden">
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/60 backdrop-blur animate-Cloye-fade-in px-8">
+                    <div className="bg-white rounded-[40px] shadow-[0_32px_80px_rgba(0,0,0,0.4)] border border-slate-200 w-full max-w-5xl relative animate-Cloye-scale-in overflow-hidden">
 
                         {/* Professional Theme Header */}
                         <div className="bg-[#0a1e3b] px-8 py-5 flex items-center justify-between">
@@ -801,25 +864,26 @@ export default function ClaimsPage() {
                             </button>
                         </div>
 
-                        <div className="p-12 animate-nina-fade-in-up">
+                        <div className="p-12 animate-Cloye-fade-in-up">
                             <div className="text-center mb-12">
                                 <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">What are you claiming for?</h3>
-                                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Select your medical service category</p>
+                                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Select your service category</p>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
                                 {INSURANCE_TYPES.map((type) => (
                                     <div
                                         key={type.id}
                                         id={`category-${type.id}`}
-                                        onClick={() => { setSelectedType(type.id); setStep(2); }}
+                                        onClick={() => {
+                                            setSelectedType(type.id);
+                                            setStep(2);
+                                        }}
                                         className="group bg-white p-8 rounded-[32px] border border-slate-300 hover:border-blue-500 shadow-md hover:shadow-2xl hover:shadow-blue-900/10 hover:-translate-y-1.5 transition-all duration-500 cursor-pointer relative"
                                     >
                                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500
                                             ${type.color === 'rose' ? 'bg-rose-50 text-rose-600' :
-                                                type.color === 'blue' ? 'bg-blue-50 text-blue-600' :
-                                                    type.color === 'emerald' ? 'bg-emerald-50 text-emerald-600' :
-                                                        'bg-amber-50 text-amber-600'}`}
+                                                'bg-blue-50 text-blue-600'}`}
                                         >
                                             <type.icon className="w-7 h-7" />
                                         </div>
@@ -842,28 +906,28 @@ export default function ClaimsPage() {
             )}
 
             <style jsx global>{`
-                @keyframes nina-fade-in { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes nina-scale-in {
+                @keyframes Cloye-fade-in { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes Cloye-scale-in {
                     from { transform: translateY(30px) scale(0.9); opacity: 0; }
                     to { transform: translateY(0) scale(1); opacity: 1; }
                 }
-                @keyframes nina-fade-in-up {
+                @keyframes Cloye-fade-in-up {
                     from { transform: translateY(15px); opacity: 0; }
                     to { transform: translateY(0); opacity: 1; }
                 }
 
-                .animate-nina-fade-in { animation: nina-fade-in 0.6s ease-out forwards; }
-                .animate-nina-scale-in { animation: nina-scale-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-                .animate-nina-fade-in-up { 
-                    animation: nina-fade-in-up 0.8s ease-out 0.2s forwards; 
+                .animate-Cloye-fade-in { animation: Cloye-fade-in 0.6s ease-out forwards; }
+                .animate-Cloye-scale-in { animation: Cloye-scale-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+                .animate-Cloye-fade-in-up { 
+                    animation: Cloye-fade-in-up 0.8s ease-out 0.2s forwards; 
                     opacity: 0;
                 }
 
-                @keyframes nina-pointer-float {
+                @keyframes Cloye-pointer-float {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-8px); }
                 }
-                .animate-nina-pointer-float { animation: nina-pointer-float 1.5s ease-in-out infinite; }
+                .animate-Cloye-pointer-float { animation: Cloye-pointer-float 1.5s ease-in-out infinite; }
                 @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
                 .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
                 @keyframes card-entrance { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
