@@ -22,7 +22,10 @@ interface ChatContextType {
     updateWidth: (newWidth: number) => void;
     isFloating: boolean;
     setIsFloating: (val: boolean) => void;
+    isExpanded: boolean;
+    setIsExpanded: (val: boolean) => void;
 }
+
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
@@ -35,6 +38,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const [isWorkflowPaused, setIsWorkflowPaused] = useState(false);
     const [isWorkflowActive, setIsWorkflowActive] = useState(false);
     const [isFloating, setIsFloating] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     // Load saved states from storage
     useEffect(() => {
@@ -74,6 +78,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         stopSpeech();
         setIsOpen(false);
         setIsFloating(false); // Always reset to sidebar mode on close
+        setIsExpanded(false);
 
         // Ensure workflow is terminated when chat is closed
         setIsWorkflowActive(false);
@@ -83,7 +88,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const clearExternalMessage = useCallback(() => setExternalMessage(null), []);
 
     const updateWidth = useCallback((newWidth: number) => {
-        const clampedWidth = Math.min(Math.max(newWidth, 280), 600);
+        const clampedWidth = Math.min(Math.max(newWidth, 280), 800);
         setWidth(clampedWidth);
         localStorage.setItem("chat_panel_width", clampedWidth.toString());
     }, []);
@@ -112,7 +117,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             clearExternalMessage,
             updateWidth,
             isFloating,
-            setIsFloating
+            setIsFloating,
+            isExpanded,
+            setIsExpanded
         }}>
             {children}
         </ChatContext.Provider>
@@ -126,3 +133,4 @@ export function useChat() {
     }
     return context;
 }
+

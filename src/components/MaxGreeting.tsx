@@ -17,7 +17,7 @@ export default function MaxGreeting() {
         }
 
         const triggerSpeech = () => {
-            speakText("Hi, I’m Nina. Your Assistant. Ask me anything");
+            speakText("Hi, I’m Cloye. Your Assistant. Ask me anything");
             window.removeEventListener('click', triggerSpeech);
             window.removeEventListener('keydown', triggerSpeech);
         };
@@ -30,7 +30,7 @@ export default function MaxGreeting() {
 
                 // If the user has already interacted, speak immediately
                 if (navigator.userActivation?.isActive) {
-                    speakText("Hi, I’m Nina. Your Assistant. Ask me anything");
+                    speakText("Hi, I’m Cloye. Your Assistant. Ask me anything");
                 } else {
                     // Otherwise, wait for the first click or keypress
                     window.addEventListener('click', triggerSpeech);
@@ -56,30 +56,31 @@ export default function MaxGreeting() {
     if (!isVisible) return null;
 
     return (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/60 backdrop-blur-md animate-nina-fade-in">
-            <div className="bg-white rounded-[32px] shadow-[0_32px_80px_rgba(0,0,0,0.4)] max-w-[380px] w-full relative overflow-hidden animate-nina-scale-in">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/60 backdrop-blur-md animate-Cloye-fade-in">
+            <div className="bg-white rounded-[32px] shadow-[0_32px_80px_rgba(0,0,0,0.4)] max-w-[380px] w-full relative overflow-hidden animate-Cloye-scale-in">
 
                 {/* Full-Bleed Hero Image */}
                 <div className="relative h-80 w-full">
                     <img
-                        alt="Nina AI"
-                        src="https://cdnstaticfiles.blob.core.windows.net/cdnstaticfiles/agent_images/nina.jpeg"
+                        alt="Cloye AI"
+                        src="https://cdnstaticfiles.blob.core.windows.net/img/1770617819808_cloye-agent-face.jpg"
+                        // src="https://cdnstaticfiles.blob.core.windows.net/cdnstaticfiles/agent_images/nina.jpeg"
                         className="w-full h-full object-cover object-top"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/0 to-transparent" />
 
                     {/* Subtle Background Wave Ripples */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                        <div className="w-48 h-48 rounded-full border-2 border-blue-400/50 animate-nina-wave" />
-                        <div className="absolute w-48 h-48 rounded-full border-2 border-blue-400/30 animate-nina-wave" style={{ animationDelay: '1.5s' }} />
-                        <div className="absolute w-48 h-48 rounded-full border-2 border-blue-500/20 animate-nina-wave" style={{ animationDelay: '3s' }} />
+                        <div className="w-48 h-48 rounded-full border-2 border-blue-400/50 animate-Cloye-wave" />
+                        <div className="absolute w-48 h-48 rounded-full border-2 border-blue-400/30 animate-Cloye-wave" style={{ animationDelay: '1.5s' }} />
+                        <div className="absolute w-48 h-48 rounded-full border-2 border-blue-500/20 animate-Cloye-wave" style={{ animationDelay: '3s' }} />
                     </div>
 
-                    <div className="absolute bottom-6 left-6 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/20 shadow-lg animate-nina-float">
+                    <div className="absolute bottom-6 left-6 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/20 shadow-lg animate-Cloye-float">
                         <div className="relative flex h-2 w-2">
-                            <div className="absolute inset-0 rounded-full bg-emerald-500 animate-nina-ping opacity-75" />
-                            <div className="absolute inset-[-4px] rounded-full bg-emerald-400 animate-nina-ping opacity-30" style={{ animationDelay: '0.5s' }} />
-                            <div className="absolute inset-[-8px] rounded-full bg-emerald-300 animate-nina-ping opacity-15" style={{ animationDelay: '1s' }} />
+                            <div className="absolute inset-0 rounded-full bg-emerald-500 animate-Cloye-ping opacity-75" />
+                            <div className="absolute inset-[-4px] rounded-full bg-emerald-400 animate-Cloye-ping opacity-30" style={{ animationDelay: '0.5s' }} />
+                            <div className="absolute inset-[-8px] rounded-full bg-emerald-300 animate-Cloye-ping opacity-15" style={{ animationDelay: '1s' }} />
                             <div className="relative rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
                         </div>
                         <span className="text-white text-[10px] font-bold uppercase tracking-[0.15em] drop-shadow-sm">Active Now</span>
@@ -87,13 +88,13 @@ export default function MaxGreeting() {
                 </div>
 
                 {/* Content Area */}
-                <div className="p-8 pb-8 flex flex-col items-center animate-nina-fade-in-up">
+                <div className="p-8 pb-8 flex flex-col items-center animate-Cloye-fade-in-up">
                     <div className="text-center space-y-2 mb-6">
                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600/80">
                             Digital Assistant
                         </p>
                         <h3 className="text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
-                            Hi, I’m <span className="text-blue-600">Nina</span>.
+                            Hi, I’m <span className="text-blue-600">Cloye</span>.
                         </h3>
                     </div>
 
@@ -103,11 +104,11 @@ export default function MaxGreeting() {
                             openChat("What would you like to do today? I can help you to onboard a new company, file a claim, or onboard a new policy provider.");
                             setIsVisible(false);
                         }}
-                        className="group relative w-full overflow-hidden rounded-2xl bg-[#0a1e3b] px-6 py-4 transition-all duration-300 hover:bg-blue-900 hover:shadow-xl hover:shadow-blue-900/20 active:scale-[0.98] animate-nina-pulse-gentle"
+                        className="group relative w-full overflow-hidden rounded-2xl bg-[#0a1e3b] px-6 py-4 transition-all duration-300 hover:bg-blue-900 hover:shadow-xl hover:shadow-blue-900/20 active:scale-[0.98] animate-Cloye-pulse-gentle"
                     >
                         <div className="relative z-10 flex items-center justify-center gap-2 text-white font-bold tracking-wide">
                             <Sparkles size={18} className="text-blue-400 group-hover:animate-spin-slow" />
-                            <span>Ask Nina</span>
+                            <span>Ask Cloye</span>
                         </div>
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
                     </button>
@@ -115,31 +116,31 @@ export default function MaxGreeting() {
             </div>
 
             <style jsx>{`
-                @keyframes nina-fade-in {
+                @keyframes Cloye-fade-in {
                     from { opacity: 0; }
                     to { opacity: 1; }
                 }
-                @keyframes nina-scale-in {
+                @keyframes Cloye-scale-in {
                     from { transform: translateY(30px) scale(0.9); opacity: 0; }
                     to { transform: translateY(0) scale(1); opacity: 1; }
                 }
-                @keyframes nina-ping {
+                @keyframes Cloye-ping {
                     75%, 100% { transform: scale(2.5); opacity: 0; }
                 }
-                @keyframes nina-float {
+                @keyframes Cloye-float {
                     0%, 100% { transform: translateY(0); }
                     50% { transform: translateY(-4px); }
                 }
-                @keyframes nina-wave {
+                @keyframes Cloye-wave {
                     0% { transform: scale(0.8); opacity: 0; }
                     20% { opacity: 0.6; }
                     100% { transform: scale(2.5); opacity: 0; }
                 }
-                @keyframes nina-fade-in-up {
+                @keyframes Cloye-fade-in-up {
                     from { transform: translateY(10px); opacity: 0; }
                     to { transform: translateY(0); opacity: 1; }
                 }
-                @keyframes nina-pulse-gentle {
+                @keyframes Cloye-pulse-gentle {
                     0%, 100% { transform: scale(1); }
                     50% { transform: scale(1.02); }
                 }
@@ -150,27 +151,27 @@ export default function MaxGreeting() {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }
                 }
-                .animate-nina-fade-in {
-                    animation: nina-fade-in 0.6s ease-out forwards;
+                .animate-Cloye-fade-in {
+                    animation: Cloye-fade-in 0.6s ease-out forwards;
                 }
-                .animate-nina-scale-in {
-                    animation: nina-scale-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                .animate-Cloye-scale-in {
+                    animation: Cloye-scale-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 }
-                .animate-nina-ping {
-                    animation: nina-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+                .animate-Cloye-ping {
+                    animation: Cloye-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
                 }
-                .animate-nina-float {
-                    animation: nina-float 3s ease-in-out infinite;
+                .animate-Cloye-float {
+                    animation: Cloye-float 3s ease-in-out infinite;
                 }
-                .animate-nina-wave {
-                    animation: nina-wave 4.5s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+                .animate-Cloye-wave {
+                    animation: Cloye-wave 4.5s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
                 }
-                .animate-nina-fade-in-up {
-                    animation: nina-fade-in-up 0.8s ease-out 0.2s forwards;
+                .animate-Cloye-fade-in-up {
+                    animation: Cloye-fade-in-up 0.8s ease-out 0.2s forwards;
                     opacity: 0;
                 }
-                .animate-nina-pulse-gentle {
-                    animation: nina-pulse-gentle 2s ease-in-out infinite;
+                .animate-Cloye-pulse-gentle {
+                    animation: Cloye-pulse-gentle 2s ease-in-out infinite;
                 }
                 .animate-shimmer {
                     animation: shimmer 2s infinite;
