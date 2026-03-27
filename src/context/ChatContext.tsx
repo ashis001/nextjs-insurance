@@ -24,6 +24,8 @@ interface ChatContextType {
     setIsFloating: (val: boolean) => void;
     isExpanded: boolean;
     setIsExpanded: (val: boolean) => void;
+    submittedClaimId: string | null;
+    setSubmittedClaimId: (id: string | null) => void;
 }
 
 
@@ -39,6 +41,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const [isWorkflowActive, setIsWorkflowActive] = useState(false);
     const [isFloating, setIsFloating] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [submittedClaimId, setSubmittedClaimId] = useState<string | null>(null);
 
     // Load saved states from storage
     useEffect(() => {
@@ -119,7 +122,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             isFloating,
             setIsFloating,
             isExpanded,
-            setIsExpanded
+            setIsExpanded,
+            submittedClaimId,
+            setSubmittedClaimId
         }}>
             {children}
         </ChatContext.Provider>

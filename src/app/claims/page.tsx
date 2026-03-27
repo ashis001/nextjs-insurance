@@ -68,7 +68,7 @@ const INSURANCE_TYPES = [
 
 export default function ClaimsPage() {
     const router = useRouter();
-    const { toggleChat, openChat, isWorkflowPaused, isWorkflowActive, setIsWorkflowActive } = useChat();
+    const { toggleChat, openChat, isWorkflowPaused, isWorkflowActive, setIsWorkflowActive, setSubmittedClaimId, submittedClaimId } = useChat();
     const isWorkflowPausedRef = useRef(isWorkflowPaused);
     const isWorkflowActiveRef = useRef(isWorkflowActive);
 
@@ -80,6 +80,8 @@ export default function ClaimsPage() {
     const [step, setStep] = useState(0);
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [selectedSubType, setSelectedSubType] = useState<any>(null);
+    const [isFloating, setIsFloating] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -97,6 +99,12 @@ export default function ClaimsPage() {
     });
 
     const hasStartedRef = useRef(false);
+
+    useEffect(() => {
+        if (submittedClaimId === "CLM-10234" && step !== 5) {
+            setStep(5);
+        }
+    }, [submittedClaimId, step]);
 
     useEffect(() => {
         setMounted(true);
@@ -287,6 +295,7 @@ export default function ClaimsPage() {
 
                     // Final message - only use openChat to avoid duplicate speech
                     openChat("Your claim has been submitted successfully! The claim ID is CLM-89210. You can track the status in the claims dashboard.");
+                    setSubmittedClaimId("CLM-89210"); // Set the submitted claim ID in context
 
                     // Wait a bit before deactivating workflow
                     await delay(2000); // Increased delay to ensure message is processed
@@ -314,7 +323,7 @@ export default function ClaimsPage() {
 
             runGuide();
         }
-    }, [openChat, setIsWorkflowActive]);
+    }, [openChat, setIsWorkflowActive, setSubmittedClaimId]);
 
     // Pointer Sync
     useEffect(() => {
@@ -365,6 +374,7 @@ export default function ClaimsPage() {
         setTimeout(() => {
             setIsSubmitting(false);
             setStep(5); // Success/Tracking View
+            setSubmittedClaimId("CLM-89210"); // Set globally
         }, 2000);
     };
 
@@ -723,7 +733,7 @@ export default function ClaimsPage() {
                                     <CheckCircle className="w-8 h-8 text-green-600" />
                                 </div>
                                 <h2 className="text-3xl font-black text-slate-900">Claim Submitted Successfully!</h2>
-                                <p className="text-slate-500 font-medium mt-2">Your claim ID is <span className="text-blue-600 font-mono font-bold">#CLM-89210</span>. Track the status below.</p>
+                                <p className="text-slate-500 font-medium mt-2">Your claim ID is <span className="text-blue-600 font-mono font-bold">#{submittedClaimId || "CLM-89210"}</span>. Track the status below.</p>
                             </div>
 
                             {/* Process Visualizer Card (Reused from previous code) */}
@@ -746,8 +756,8 @@ export default function ClaimsPage() {
                                 <div className="p-12">
                                     <div className="relative">
                                         <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 rounded-full" />
-                                        {/* Animation starting... */}
-                                        <div className="absolute top-1/2 left-0 w-[15%] h-1 bg-gradient-to-r from-blue-600 to-indigo-500 -translate-y-1/2 rounded-full transition-all duration-[3000ms] shadow-[0_0_20px_rgba(79,70,229,0.5)] animate-grow-bar" />
+                                        {/* Animation starting... increased width for status visibility */}
+                                        <div className="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-500 -translate-y-1/2 rounded-full transition-all duration-[3000ms] shadow-[0_0_20px_rgba(79,70,229,0.5)] animate-grow-bar" />
 
                                         <div className="relative flex justify-between w-full">
                                             {[
@@ -794,7 +804,7 @@ export default function ClaimsPage() {
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {[
-                                                { id: 'CLM-89210', category: 'Health', date: 'Feb 7, 2026 17:20', status: 'Processing', color: 'blue' },
+                                                { id: submittedClaimId || 'CLM-89210', category: 'Health', date: 'Feb 7, 2026 17:20', status: 'Processing', color: 'blue' },
                                                 { id: 'CLM-89105', category: 'Auto', date: 'Feb 5, 2026 10:15', status: 'Paid', color: 'green' },
                                                 { id: 'CLM-88992', category: 'Health', date: 'Feb 1, 2026 14:30', status: 'Paid', color: 'green' },
                                             ].map((claim, idx) => (
@@ -932,8 +942,8 @@ export default function ClaimsPage() {
                 .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
                 @keyframes card-entrance { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
                 .animate-card-entrance { animation: card-entrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-                @keyframes grow-bar { from { width: 0%; } to { width: 35%; } }
-                .animate-grow-bar { animation: grow-bar 2s ease-out forwards; }
+                @keyframes grow-bar { from { width: 0%; } to { width: 25%; } }
+                .animate-grow-bar { animation: grow-bar 2.5s cubic-bezier(0.1, 0, 0.1, 1) forwards; }
             `}</style>
         </div>
     );
