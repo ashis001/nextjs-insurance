@@ -152,7 +152,7 @@ export default function LoginPage() {
                 <img src="/max.png" alt="Max Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white tracking-tight">Max Insurance</h1>
+                <h1 className="text-xl font-bold text-white tracking-tight">Group Benefitz</h1>
                 <p className="text-[10px] text-blue-300 font-medium uppercase tracking-widest">Enterprise Secured</p>
               </div>
             </div>

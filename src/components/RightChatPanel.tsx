@@ -61,7 +61,9 @@ export default function RightChatPanel() {
         isFloating,
         setIsFloating,
         isExpanded,
-        setIsExpanded
+        setIsExpanded,
+        setSubmittedClaimId,
+        submittedClaimId
     } = useChat();
     const [history, setHistory] = useState<ChatSession[]>([]);
     const [inputValue, setInputValue] = useState("");
@@ -769,6 +771,7 @@ export default function RightChatPanel() {
                     setIsTyping(true);
                     await new Promise(r => setTimeout(r, 500));
                     setIsTyping(false);
+                    setSubmittedClaimId("CLM-10234");
                     await streamMessage("Claim Submitted. Your **Claim ID: CLM-10234**. I\u2019ll track it for you and send you notification as there is any update.", "assistant");
                     await new Promise(r => setTimeout(r, 1000));
                     await streamMessage("I\u2019ve sent a confirmation to **john.m@gmail.com**.", "assistant");
