@@ -141,28 +141,28 @@ export default function LoginPage() {
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 bg-white rounded-[2.5rem] border border-slate-300 shadow-[0_48px_80px_-16px_rgba(0,0,0,0.12)] relative z-10 transition-all duration-700 animate-slide-up overflow-hidden">
 
         {/* Left Panel: Deep Blue Professional Panel */}
-        <div className="hidden lg:flex flex-col justify-between p-12 bg-[#0a1e3b] relative overflow-hidden border-r border-white/10">
+        <div className="hidden lg:flex flex-col justify-between p-8 bg-[#0a1e3b] relative overflow-hidden border-r border-white/10">
           {/* Subtle decoration */}
           <div className="absolute top-[-10%] right-[-10%] w-[400px] h-[400px] bg-blue-400/10 rounded-full blur-[100px]" />
           <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-teal-400/10 rounded-full blur-[100px]" />
 
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-12">
-              <div className="w-10 h-10 flex items-center justify-center">
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="flex flex-col items-center gap-3 mb-6">
+              <div className="w-20 h-20 flex items-center justify-center">
                 <img src="/max.png" alt="Max Logo" className="w-full h-full object-contain" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-white tracking-tight">Group Benefitz</h1>
-                <p className="text-[10px] text-blue-300 font-medium uppercase tracking-widest">Enterprise Secured</p>
+              <div className="text-center">
+                <h1 className="text-3xl font-extrabold text-white tracking-tighter">Group Benefitz</h1>
+                <p className="text-[12px] text-blue-300 font-bold uppercase tracking-[0.3em] mt-1">Enterprise Secured</p>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <h2 className="text-5xl font-serif text-white leading-tight">
+            <div className="space-y-4 text-center">
+              <h2 className="text-4xl font-serif text-white leading-tight">
                 Your Future, <br />
                 <span className="text-blue-400 font-sans italic">Perfectly Secured.</span>
               </h2>
-              <p className="text-blue-100/60 text-lg leading-relaxed max-w-sm font-medium">
+              <p className="text-blue-100/60 text-base leading-relaxed max-w-sm mx-auto font-medium">
                 Comprehensive professional protection tailored for your peace of mind.
               </p>
             </div>
@@ -172,10 +172,10 @@ export default function LoginPage() {
             <ShieldCharacter />
           </div>
 
-          <div className="relative z-10 pt-8 border-t border-white/10">
+          <div className="relative z-10 pt-6 border-t border-white/10">
             <div className="flex items-center justify-between">
               <div className="flex flex-col">
-                <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-3">Compliance Ready</span>
+                <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest mb-1.5">Compliance Ready</span>
                 <div className="flex gap-4">
                   <div className="text-xs text-white/50 flex items-center gap-1.5 font-medium">
                     <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> ISO 27001
@@ -187,11 +187,11 @@ export default function LoginPage() {
               </div>
               <div className="flex -space-x-2">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="w-9 h-9 rounded-full bg-slate-800 border-2 border-[#0a1e3b] flex items-center justify-center text-[10px] text-white font-bold opacity-80">
+                  <div key={i} className="w-8 h-8 rounded-full bg-slate-800 border-2 border-[#0a1e3b] flex items-center justify-center text-[10px] text-white font-bold opacity-80">
                     {i}
                   </div>
                 ))}
-                <div className="w-9 h-9 rounded-full bg-blue-500 border-2 border-[#0a1e3b] flex items-center justify-center text-[10px] text-white font-bold shadow-lg">
+                <div className="w-8 h-8 rounded-full bg-blue-500 border-2 border-[#0a1e3b] flex items-center justify-center text-[10px] text-white font-bold shadow-lg">
                   10k+
                 </div>
               </div>
@@ -200,9 +200,9 @@ export default function LoginPage() {
         </div>
 
         {/* Right Panel: Clean White Form */}
-        <div className="p-8 sm:p-12 lg:p-16 flex flex-col justify-center bg-white">
-          <div className="mb-12">
-            <h3 className="text-3xl font-serif font-bold text-[#0a1e3b] mb-3">Welcome Back</h3>
+        <div className="p-8 lg:p-12 flex flex-col justify-center bg-white">
+          <div className="mb-8">
+            <h3 className="text-3xl font-serif font-bold text-[#0a1e3b] mb-2">Welcome Back</h3>
             <p className="text-slate-500 font-medium">Securely sign in to your insurance portal</p>
           </div>
 
@@ -221,13 +221,12 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300/60 text-slate-900 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all placeholder:text-slate-400 font-medium shadow-sm hover:translate-x-1 duration-300"
+                  className="w-full bg-slate-50 border border-slate-300/60 text-slate-900 rounded-2xl py-3.5 pl-12 pr-4 focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all placeholder:text-slate-400 font-medium shadow-sm hover:translate-x-1 duration-300"
                   placeholder="name@company.com"
-                  required
                 />
               </div>
             </div>
-
+ 
             <div className="space-y-2 animate-slide-right [animation-delay:300ms]">
               <div className="flex items-center justify-between ml-1">
                 <label className="text-sm font-bold text-slate-700">Password</label>
@@ -239,9 +238,8 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300/60 text-slate-900 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-medium shadow-sm hover:translate-x-1 duration-300"
+                  className="w-full bg-slate-50 border border-slate-300/60 text-slate-900 rounded-2xl py-3.5 pl-12 pr-12 focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-medium shadow-sm hover:translate-x-1 duration-300"
                   placeholder="••••••••"
-                  required
                 />
                 <button
                   type="button"

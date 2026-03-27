@@ -1376,7 +1376,7 @@ export function TierEditorPanel({
                     <button onClick={onCancel} className="bg-white border border-slate-300 rounded px-8 py-2 text-[11px] font-black text-[#1e3a5f] hover:bg-slate-50 hover:border-slate-400 transition-all shadow-sm uppercase tracking-wide">Close</button>
                 </div>
 
-                {/* Guide Pointer (Cloye's Mouse) - Outside scroll container to stay on top of footer */}
+                {/* Guide Pointer (Cloey's Mouse) - Outside scroll container to stay on top of footer */}
                 {pointerPos && activeFillingField && (
                     <div
                         style={{
@@ -1389,7 +1389,7 @@ export function TierEditorPanel({
                         }}
                         className="transition-all duration-300 ease-out"
                     >
-                        <div className="relative flex flex-col items-center animate-Cloye-pointer-float">
+                        <div className="relative flex flex-col items-center animate-Cloey-pointer-float">
                             <div className="text-red-500 filter drop-shadow-[0_4px_12px_rgba(239,68,68,0.4)] transform rotate-[225deg]">
                                 <MousePointer2 className="w-6 h-6 fill-red-500" />
                             </div>
@@ -1399,12 +1399,12 @@ export function TierEditorPanel({
                 )}
             </div>
             <style jsx global>{`
-                @keyframes Cloye-pointer-float {
+                @keyframes Cloey-pointer-float {
                   0%, 100% { transform: translateY(0); }
                   50% { transform: translateY(-8px); }
                 }
-                .animate-Cloye-pointer-float {
-                  animation: Cloye-pointer-float 1.5s ease-in-out infinite;
+                .animate-Cloey-pointer-float {
+                  animation: Cloey-pointer-float 1.5s ease-in-out infinite;
                 }
             `}</style>
         </div>
